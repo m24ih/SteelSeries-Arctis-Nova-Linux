@@ -215,6 +215,7 @@ fn handle_client(
         ("POST", "/api/chatmix") | ("PUT", "/api/chatmix") => handle_post_chatmix(&mut stream, &worker, &body),
         ("POST", "/api/save-flash") | ("POST", "/api/flash-save") => handle_post_save_flash(&mut stream, &worker),
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
+        ("GET", "/favicon.ico") | ("GET", "/favicon.svg") => write_svg_response(&mut stream, 200, FAVICON_SVG),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
     }
 }
@@ -951,7 +952,29 @@ fn write_error_response(stream: &mut TcpStream, status: u16, message: &str) -> R
     write_json_response(stream, status, &json)
 }
 
+fn write_svg_response(stream: &mut TcpStream, status: u16, svg_body: &str) -> Result<()> {
+    let bytes = svg_body.as_bytes();
+    let header = format!(
+        concat!(
+            "HTTP/1.1 {} {}\r\n",
+            "Content-Type: image/svg+xml; charset=utf-8\r\n",
+            "Cache-Control: public, max-age=86400\r\n",
+            "Content-Length: {}\r\n",
+            "Connection: close\r\n\r\n"
+        ),
+        status,
+        status_reason(status),
+        bytes.len()
+    );
+    stream.write_all(header.as_bytes())?;
+    stream.write_all(bytes)?;
+    stream.flush()?;
+    Ok(())
+}
+
 const DEFAULT_INDEX_HTML: &str = include_str!("../web/index.html");
+
+const FAVICON_SVG: &str = include_str!("../web/favicon.svg");
 
 #[cfg(test)]
 mod tests {
@@ -963,6 +986,18 @@ mod tests {
         assert_eq!(extract_query_param("/api/eq?target=mic&other=1", "target"), Some("mic".to_string()));
         assert_eq!(extract_query_param("/api/eq?other=1&channel=24g", "channel"), Some("24g".to_string()));
         assert_eq!(extract_query_param("/api/eq", "channel"), None);
+    }
+
+    #[test]
+    fn test_favicon_svg_is_valid_svg() {
+        assert!(
+            FAVICON_SVG.contains("<svg"),
+            "FAVICON_SVG must contain '<svg' element declaration"
+        );
+        assert!(
+            FAVICON_SVG.contains("viewBox=\"0 0 32 32\""),
+            "FAVICON_SVG must declare a 32x32 viewBox"
+        );
     }
 }
 
