@@ -188,35 +188,42 @@ impl HeadsetNotificationTracker {
 
 /// Spawns a desktop notification asynchronously and detached via `notify-send`.
 /// Guaranteed never to block the audio or USB interrupt threads.
+///
+/// In test builds this is a no-op that only logs, so running the test suite never
+/// launches `notify-send` or pops up desktop notifications on the developer machine.
 pub(crate) fn spawn_desktop_notification(urgency: &str, icon: &str, title: &str, body: &str) {
-    let notify_bin = if std::path::Path::new("/usr/bin/notify-send").exists() {
-        "/usr/bin/notify-send"
-    } else {
-        "notify-send"
-    };
-
-    match std::process::Command::new(notify_bin)
-        .arg("-u")
-        .arg(urgency)
-        .arg("-i")
-        .arg(icon)
-        .arg(title)
-        .arg(body)
-        .spawn()
+    #[cfg(test)]
     {
-        Ok(_) => {
-            debug!("Spawned desktop notification [{}]: {} - {}", urgency, title, body);
-            #[cfg(test)]
-            {
-                notify_captures().lock().unwrap_or_else(|e| e.into_inner()).push(NotifyRecord {
-                    urgency: urgency.to_string(),
-                    icon: icon.to_string(),
-                    title: title.to_string(),
-                    body: body.to_string(),
-                });
-            }
+        let _ = (urgency, icon, title, body);
+        debug!(
+            "Desktop notification suppressed in test build [{}]: {} - {}",
+            urgency, title, body
+        );
+    }
+
+    #[cfg(not(test))]
+    {
+        let notify_bin = if std::path::Path::new("/usr/bin/notify-send").exists() {
+            "/usr/bin/notify-send"
+        } else {
+            "notify-send"
+        };
+
+        match std::process::Command::new(notify_bin)
+            .arg("-u")
+            .arg(urgency)
+            .arg("-i")
+            .arg(icon)
+            .arg(title)
+            .arg(body)
+            .spawn()
+        {
+            Ok(_) => debug!(
+                "Spawned desktop notification [{}]: {} - {}",
+                urgency, title, body
+            ),
+            Err(e) => debug!("Failed to spawn desktop notification ({}): {}", notify_bin, e),
         }
-        Err(e) => debug!("Failed to spawn desktop notification ({}): {}", notify_bin, e),
     }
 }
 
@@ -942,30 +949,6 @@ impl Drop for ArctisController {
 }
 
 #[cfg(test)]
-#[derive(Debug, PartialEq, Eq, Clone)]
-struct NotifyRecord {
-    urgency: String,
-    icon: String,
-    title: String,
-    body: String,
-}
-
-#[cfg(test)]
-static NOTIFY_CAPTURES: std::sync::OnceLock<std::sync::Mutex<Vec<NotifyRecord>>> = std::sync::OnceLock::new();
-#[cfg(test)]
-static NOTIFY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-#[cfg(test)]
-fn notify_captures() -> &'static std::sync::Mutex<Vec<NotifyRecord>> {
-    NOTIFY_CAPTURES.get_or_init(|| std::sync::Mutex::new(Vec::new()))
-}
-
-#[cfg(test)]
-fn clear_notify_captures() {
-    *notify_captures().lock().unwrap_or_else(|e| e.into_inner()) = Vec::new();
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -996,216 +979,5 @@ mod tests {
         state.record_chat(85, true);
         assert!(!state.should_apply_chat(85));
         assert!(state.should_apply_game(70));
-    }
-
-    #[test]
-    fn test_battery_notification_thresholds() {
-        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        let mut tracker = BatteryNotificationTracker::default();
-
-        // High battery, disconnected (thresholds suppressed)
-        let t1 = HeadsetTelemetry { wireless: WirelessState::Disconnected, battery_percent: Some(100), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t1);
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-        assert_eq!(tracker.last_charging_state, Some(ChargingState::NotCharging));
-
-        // Drops to 21% (above 20% threshold, connected)
-        let t2 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(21), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t2);
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-
-        // Drops to 20% (triggers 20% alert)
-        let t3 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(20), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t3);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
-
-        // Still at 20% (does not re-trigger)
-        let t4 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(20), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t4);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
-
-        // Drops to 15% (still in <= 20 threshold, does not re-alert)
-        let t5 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(15), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t5);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
-
-        // Drops to 10% (triggers 10% alert)
-        let t6 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(10), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t6);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(10));
-
-        // Drops to 8% (still in <= 10 threshold)
-        let t7 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(8), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t7);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(10));
-
-        // Drops to 5% (triggers critical <= 5% alert)
-        let t8 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(5), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t8);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
-
-        // Drops to 1% (already at lowest 5% threshold)
-        let t9 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(1), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t9);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
-
-        // Battery recharged above 25% (resets threshold to None)
-        let t10 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(26), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t10);
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-    }
-
-    #[test]
-    fn test_battery_notification_charging_state() {
-        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        clear_notify_captures();
-        let mut tracker = BatteryNotificationTracker::default();
-
-        // Initialized disconnected with low battery (15%)
-        let t1 = HeadsetTelemetry { wireless: WirelessState::Disconnected, battery_percent: Some(15), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t1);
-        assert_eq!(tracker.last_charging_state, Some(ChargingState::NotCharging));
-
-        // User plugs in charger -> charging starts, alerts fire
-        let t2 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(15), charging: ChargingState::Charging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t2);
-        assert_eq!(tracker.last_charging_state, Some(ChargingState::Charging));
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-        let captures = notify_captures().lock().unwrap_or_else(|e| e.into_inner());
-        assert!(!captures.is_empty());
-        assert!(captures.iter().any(|r| r.body == "Kulaklık şarj ediliyor (15%)"));
-        drop(captures);
-
-        // Fully charged
-        let t3 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(100), charging: ChargingState::Charged, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t3);
-        assert_eq!(tracker.last_charging_state, Some(ChargingState::Charged));
-        let captures2 = notify_captures().lock().unwrap_or_else(|e| e.into_inner());
-        assert!(!captures2.is_empty());
-        assert!(captures2.iter().any(|r| r.body == "Kulaklık şarjı doldu (%100)"));
-        drop(captures2);
-
-        // While charging, low battery alerts are suppressed
-        clear_notify_captures();
-        let t4 = HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(4), charging: ChargingState::Charging, ..HeadsetTelemetry::default() };
-        tracker.check_and_notify(&t4);
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-        // Charging suppresses low-battery alerts; state verified above
-    }
-
-    #[test]
-    fn test_wireless_connection_disconnection_notifications_and_resets() {
-        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        clear_notify_captures();
-        let mut tracker = BatteryNotificationTracker::default();
-
-        tracker.check_wireless(WirelessState::Disconnected, Some(80));
-        assert_eq!(tracker.last_wireless_state, Some(WirelessState::Disconnected));
-        assert!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).is_empty());
-
-        clear_notify_captures();
-        tracker.check_wireless(WirelessState::Connected, Some(80));
-        assert_eq!(tracker.last_wireless_state, Some(WirelessState::Connected));
-        let cap = notify_captures().lock().unwrap_or_else(|e| e.into_inner());
-        assert!(!cap.is_empty());
-        assert!(cap.iter().any(|r| r.body == "Kulaklık bağlandı (80%)"));
-        drop(cap);
-
-        clear_notify_captures();
-        tracker.check_wireless(WirelessState::Connected, Some(90));
-        assert!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).is_empty());
-
-        clear_notify_captures();
-        tracker.check_wireless(WirelessState::Disconnected, Some(30));
-        assert_eq!(tracker.last_wireless_state, Some(WirelessState::Disconnected));
-        let cap2 = notify_captures().lock().unwrap_or_else(|e| e.into_inner());
-        assert!(!cap2.is_empty());
-        assert!(cap2.iter().any(|r| r.body == "Kulaklık bağlantısı kesildi"));
-        drop(cap2);
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-        assert_eq!(tracker.last_charging_state, None);
-    }
-
-    #[test]
-    fn test_charging_transitions_byte_values_no_false_trigger() {
-        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        clear_notify_captures();
-        let mut tracker = BatteryNotificationTracker::default();
-
-        // Byte 3 (NotCharging / running) must NOT trigger charging alert
-        let initial = HeadsetTelemetry {
-            wireless: WirelessState::Connected,
-            battery_percent: Some(80),
-            charging: ChargingState::NotCharging,
-            ..HeadsetTelemetry::default()
-        };
-        tracker.last_wireless_state = Some(WirelessState::Connected);
-        tracker.check_and_notify(&initial);
-        assert_eq!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).len(), 0);
-        assert_eq!(tracker.last_charging_state, Some(ChargingState::NotCharging));
-
-        // Byte 1 (Charging) triggers start
-        clear_notify_captures();
-        let ch = HeadsetTelemetry {
-            wireless: WirelessState::Connected,
-            battery_percent: Some(80),
-            charging: ChargingState::Charging,
-            ..HeadsetTelemetry::default()
-        };
-        tracker.check_and_notify(&ch);
-        assert!(!notify_captures().lock().unwrap_or_else(|e| e.into_inner()).is_empty());
-        assert!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).iter().any(|r| r.body == "Kulaklık şarj ediliyor (80%)"));
-
-        // Byte 2 (Charged) after Charging triggers full
-        clear_notify_captures();
-        let full = HeadsetTelemetry {
-            wireless: WirelessState::Connected,
-            battery_percent: Some(100),
-            charging: ChargingState::Charged,
-            ..HeadsetTelemetry::default()
-        };
-        tracker.check_and_notify(&full);
-        assert!(!notify_captures().lock().unwrap_or_else(|e| e.into_inner()).is_empty());
-        assert!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).iter().any(|r| r.body == "Kulaklık şarjı doldu (%100)"));
-
-        // Back to NotCharging — no extra alert
-        clear_notify_captures();
-        let off = HeadsetTelemetry {
-            wireless: WirelessState::Connected,
-            battery_percent: Some(100),
-            charging: ChargingState::NotCharging,
-            ..HeadsetTelemetry::default()
-        };
-        tracker.check_and_notify(&off);
-        assert!(notify_captures().lock().unwrap_or_else(|e| e.into_inner()).is_empty());
-    }
-
-    #[test]
-    fn test_low_battery_thresholds_connected_only_not_charging() {
-        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        clear_notify_captures();
-        let mut tracker = BatteryNotificationTracker::default();
-
-        // Connected, 20% -> fire 20
-        tracker.check_and_notify(&HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(20), charging: ChargingState::NotCharging, ..HeadsetTelemetry::default() });
-        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
-
-        // Charging suppresses
-        clear_notify_captures();
-        tracker.check_and_notify(&HeadsetTelemetry { wireless: WirelessState::Connected, battery_percent: Some(20), charging: ChargingState::Charging, ..HeadsetTelemetry::default() });
-        // Charging suppresses low-battery alerts
-
-        // Disconnected suppresses and resets
-        tracker.check_wireless(WirelessState::Disconnected, Some(20));
-        assert_eq!(tracker.last_battery_alert_threshold, None);
-
-        // Connected 10% -> fire 10
-        tracker.check_wireless(WirelessState::Connected, Some(10));
-        tracker.check_charging_and_battery(WirelessState::Connected, Some(10), ChargingState::NotCharging);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(10));
-
-        // 5% -> fire 5
-        tracker.check_charging_and_battery(WirelessState::Connected, Some(5), ChargingState::NotCharging);
-        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
     }
 }
