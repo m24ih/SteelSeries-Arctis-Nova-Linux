@@ -5,6 +5,52 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use usbip_audio::uac2::{Uac2Config, Uac2Device, Uac2Streams};
 use usbip_audio::{MonotonicClock, Server};
+use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+use windows::Win32::Media::Audio::{
+    eRender, IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
+};
+use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
+use windows::Win32::System::Com::{
+    CoCreateInstance, CoInitializeEx, CoTaskMemFree, CLSCTX_ALL, COINIT_MULTITHREADED, STGM_READ,
+};
+
+fn set_endpoint_volumes(game: u8, chat: u8) -> windows::core::Result<bool> {
+    unsafe {
+        let enumerator: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+        let devices = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
+        let mut found = [None, None];
+        for index in 0..devices.GetCount()? {
+            let device = devices.Item(index)?;
+            let props = device.OpenPropertyStore(STGM_READ)?;
+            let value = props.GetValue(&PKEY_Device_FriendlyName)?;
+            let ptr = PropVariantToStringAlloc(&value)?;
+            let name = ptr.to_string();
+            CoTaskMemFree(Some(ptr.0.cast()));
+            let name = name?;
+            let slot = if name == "Speakers (Arctis Game prototype)" {
+                Some(0)
+            } else if name == "Speakers (Arctis Chat prototype)" {
+                Some(1)
+            } else {
+                None
+            };
+            if let Some(slot) = slot {
+                if found[slot].is_some() {
+                    return Ok(false);
+                }
+                found[slot] = Some(device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)?);
+            }
+        }
+        if let [Some(game_endpoint), Some(chat_endpoint)] = found {
+            game_endpoint.SetMasterVolumeLevelScalar(f32::from(game) / 100.0, std::ptr::null())?;
+            chat_endpoint.SetMasterVolumeLevelScalar(f32::from(chat) / 100.0, std::ptr::null())?;
+            return Ok(true);
+        }
+        Ok(false)
+    }
+}
 
 #[derive(Default)]
 struct Counter(Mutex<VecDeque<f32>>);
@@ -50,18 +96,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (game_out, chat_out) = (game.clone(), chat.clone());
     let game_gain = Arc::new(AtomicU8::new(100));
     let chat_gain = Arc::new(AtomicU8::new(100));
-    let (game_mix, chat_mix) = (game_gain.clone(), chat_gain.clone());
     let stream = output.build_output_stream(
         &config,
         move |data: &mut [f32], _| {
             let mut a = game_out.0.lock().ok();
             let mut b = chat_out.0.lock().ok();
-            let gain_a = f32::from(game_mix.load(Ordering::Relaxed)) / 100.0;
-            let gain_b = f32::from(chat_mix.load(Ordering::Relaxed)) / 100.0;
             for sample in data {
                 let x = a.as_mut().and_then(|q| q.pop_front()).unwrap_or(0.0);
                 let y = b.as_mut().and_then(|q| q.pop_front()).unwrap_or(0.0);
-                *sample = ((x * gain_a + y * gain_b) * 0.5).clamp(-1.0, 1.0);
+                *sample = ((x + y) * 0.5).clamp(-1.0, 1.0);
             }
         },
         |error| eprintln!("Audio output error: {error}"),
@@ -74,6 +117,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .find(|d| d.vendor_id() == 0x1038 && d.product_id() == 0x22a1 && d.usage_page() == 0xff00)
         .ok_or("ChatMix HID interface not found")?;
     let hid = info.open_device(&api)?;
+    let (game_volume, chat_volume) = (game_gain.clone(), chat_gain.clone());
+    std::thread::spawn(move || {
+        if let Err(error) = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED).ok() } {
+            eprintln!("Audio control initialization failed: {error}");
+            return;
+        }
+        let mut last = None;
+        loop {
+            let levels = (
+                game_volume.load(Ordering::Relaxed),
+                chat_volume.load(Ordering::Relaxed),
+            );
+            if last != Some(levels) {
+                match set_endpoint_volumes(levels.0, levels.1) {
+                    Ok(true) => {
+                        last = Some(levels);
+                        println!(
+                            "Windows endpoint levels: game={} chat={}",
+                            levels.0, levels.1
+                        );
+                    }
+                    Ok(false) => (),
+                    Err(error) => eprintln!("Audio endpoint control failed: {error}"),
+                }
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+    });
     std::thread::spawn(move || {
         let mut buf = [0u8; 256];
         loop {
