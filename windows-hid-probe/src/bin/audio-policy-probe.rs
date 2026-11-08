@@ -1,5 +1,5 @@
 use arctis_windows_hid_probe::routing::{route, PolicyStore};
-use arctis_windows_hid_probe::sessions::{active_sessions, Process};
+use arctis_windows_hid_probe::sessions::{active_render_endpoint_exists, active_sessions, Process};
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 use windows::core::{define_interface, IInspectable_Vtbl, Interface, HRESULT, HSTRING};
@@ -143,6 +143,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .ok_or_else(|| {
                     windows::core::Error::from_hresult(windows::core::HRESULT(0x80070057u32 as i32))
                 })?;
+            if endpoint != "default" && !active_render_endpoint_exists(endpoint)? {
+                return Err("Target is not an active render endpoint".into());
+            }
             let packed = if endpoint == "default" {
                 HSTRING::new()
             } else {
@@ -175,6 +178,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 old[1].to_string_lossy()
             );
             if let Some(endpoint) = args.get(2) {
+                if !active_render_endpoint_exists(endpoint)? {
+                    return Err("Target is not an active render endpoint".into());
+                }
                 let restore = Restore {
                     factory: &factory,
                     pid,

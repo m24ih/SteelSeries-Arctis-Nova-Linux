@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use windows::core::{Interface, PWSTR};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
-use windows::Win32::Foundation::{CloseHandle, HANDLE, STILL_ACTIVE};
+use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT};
 use windows::Win32::Media::Audio::{
     eRender, AudioSessionStateActive, IAudioSessionControl2, IAudioSessionManager2,
     IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
@@ -11,8 +11,8 @@ use windows::Win32::Media::Audio::{
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CoCreateInstance, CoTaskMemFree, CLSCTX_ALL, STGM_READ};
 use windows::Win32::System::Threading::{
-    GetExitCodeProcess, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
-    PROCESS_QUERY_LIMITED_INFORMATION,
+    OpenProcess, QueryFullProcessImageNameW, WaitForSingleObject, PROCESS_NAME_WIN32,
+    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
 };
 
 pub struct Process {
@@ -24,7 +24,11 @@ pub struct Process {
 impl Process {
     pub fn open(pid: u32) -> windows::core::Result<Self> {
         unsafe {
-            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)?;
+            let handle = OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                false,
+                pid,
+            )?;
             let mut process = Self {
                 pid,
                 path: String::new(),
@@ -46,14 +50,15 @@ impl Process {
 
     pub fn ensure_alive(&self) -> windows::core::Result<()> {
         unsafe {
-            let mut status = 0;
-            GetExitCodeProcess(self.handle, &mut status)?;
-            if status != STILL_ACTIVE.0 as u32 {
-                return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
+            match WaitForSingleObject(self.handle, 0) {
+                WAIT_TIMEOUT => Ok(()),
+                WAIT_OBJECT_0 => Err(windows::core::Error::from_hresult(windows::core::HRESULT(
                     0x80070490u32 as i32,
-                )));
+                ))),
+                _ => Err(windows::core::Error::from_hresult(windows::core::HRESULT(
+                    0x80004005u32 as i32,
+                ))),
             }
-            Ok(())
         }
     }
 }
@@ -86,6 +91,36 @@ mod tests {
     #[test]
     fn nonexistent_process_is_rejected() {
         assert!(Process::open(0).is_err());
+    }
+
+    #[test]
+    fn process_exiting_with_still_active_code_is_detected() {
+        let mut child = std::process::Command::new("cmd.exe")
+            .args(["/C", "ping -n 2 127.0.0.1 >nul & exit /b 259"])
+            .spawn()
+            .unwrap();
+        let process = Process::open(child.id()).unwrap();
+        assert!(process.ensure_alive().is_ok());
+        child.wait().unwrap();
+        assert!(process.ensure_alive().is_err());
+    }
+}
+
+/// Return whether an exact active render endpoint ID exists. COM must be initialized.
+pub fn active_render_endpoint_exists(id: &str) -> windows::core::Result<bool> {
+    unsafe {
+        let enumerator: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+        let endpoints = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
+        for index in 0..endpoints.GetCount()? {
+            let ptr = endpoints.Item(index)?.GetId()?;
+            let value = ptr.to_string();
+            CoTaskMemFree(Some(ptr.0.cast()));
+            if value?.eq_ignore_ascii_case(id) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 
