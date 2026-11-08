@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use windows::core::Interface;
 use windows::core::PWSTR;
@@ -15,10 +16,10 @@ use windows::Win32::System::Threading::{
     OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 
-fn process_name(pid: u32) -> String {
+fn process_path(pid: u32) -> Option<String> {
     unsafe {
         let Ok(handle) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else {
-            return format!("PID {pid}");
+            return None;
         };
         let mut buffer = [0u16; 32768];
         let mut len = buffer.len() as u32;
@@ -30,10 +31,10 @@ fn process_name(pid: u32) -> String {
         );
         let _ = CloseHandle(handle);
         if result.is_err() {
-            return format!("PID {pid}");
+            return None;
         }
         let path = String::from_utf16_lossy(&buffer[..len as usize]);
-        path.rsplit('\\').next().unwrap_or(&path).to_owned()
+        Some(path)
     }
 }
 
@@ -43,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let enumerator: IMMDeviceEnumerator =
             CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
         let endpoints = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
+        let mut groups: BTreeMap<String, BTreeMap<String, BTreeSet<u32>>> = BTreeMap::new();
         for index in 0..endpoints.GetCount()? {
             let endpoint = endpoints.Item(index)?;
             let props = endpoint.OpenPropertyStore(STGM_READ)?;
@@ -61,12 +63,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let control: IAudioSessionControl2 = session.cast()?;
                 let pid = control.GetProcessId()?;
                 if pid != 0 && pid != std::process::id() {
-                    let process = process_name(pid);
-                    if process.eq_ignore_ascii_case("virtual-outputs.exe") {
+                    let Some(path) = process_path(pid) else {
+                        eprintln!("Cannot inspect process {pid}; skipping");
+                        continue;
+                    };
+                    if path
+                        .rsplit('\\')
+                        .next()
+                        .is_some_and(|n| n.eq_ignore_ascii_case("virtual-outputs.exe"))
+                    {
                         continue;
                     }
-                    println!("{name}\t{pid}\t{process}");
+                    groups
+                        .entry(path)
+                        .or_default()
+                        .entry(name.clone())
+                        .or_default()
+                        .insert(pid);
                 }
+            }
+        }
+        for (path, outputs) in groups {
+            println!("{path}");
+            for (output, pids) in outputs {
+                println!("  {output}: {pids:?}");
             }
         }
     }
