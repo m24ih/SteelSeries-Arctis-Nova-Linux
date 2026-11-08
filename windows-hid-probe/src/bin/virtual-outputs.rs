@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use usbip_audio::uac2::{Uac2Config, Uac2Device, Uac2Streams};
-use usbip_audio::{MonotonicClock, Server};
+use usbip_audio::{usbip_exe, MonotonicClock, Server};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{
@@ -110,9 +110,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "USB/IP server on localhost:{}; devices 1-1 (Game), 1-2 (Chat).",
         server.port()
     );
-    loop {
+    let usbip = usbip_exe::find().ok_or("USBip client not found")?;
+    let stop = Arc::new(AtomicBool::new(false));
+    let signal = stop.clone();
+    ctrlc::set_handler(move || signal.store(true, Ordering::Release))?;
+    let mut attached = Vec::new();
+    for busid in ["1-1", "1-2"] {
+        match usbip_exe::attach(&usbip, server.port(), busid) {
+            Ok(port) => {
+                println!("Attached {busid} to USB/IP port {port}");
+                attached.push(port);
+            }
+            Err(error) => {
+                for port in attached {
+                    if let Err(e) = usbip_exe::detach(&usbip, port) {
+                        eprintln!("Cleanup failed: {e}");
+                    }
+                }
+                return Err(error.into());
+            }
+        }
+    }
+    println!("Press Ctrl+C to disconnect prototype outputs.");
+    while !stop.load(Ordering::Acquire) {
         std::thread::sleep(Duration::from_secs(5));
     }
+    let mut cleanup_failed = false;
+    for port in attached {
+        if let Err(error) = usbip_exe::detach(&usbip, port) {
+            eprintln!("Cleanup failed: {error}");
+            cleanup_failed = true;
+        }
+    }
+    if cleanup_failed {
+        return Err("One or more prototype outputs could not be detached".into());
+    }
+    Ok(())
 }
 
 fn run_output(
