@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use usbip_audio::uac2::{Uac2Config, Uac2Device, Uac2Streams};
 use usbip_audio::{usbip_exe, MonotonicClock, Server};
-use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
+use windows::Win32::Devices::FunctionDiscovery::PKEY_DeviceInterface_FriendlyName;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{
     eRender, IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
@@ -24,14 +24,14 @@ fn set_endpoint_volumes(game: u8, chat: u8) -> windows::core::Result<bool> {
         for index in 0..devices.GetCount()? {
             let device = devices.Item(index)?;
             let props = device.OpenPropertyStore(STGM_READ)?;
-            let value = props.GetValue(&PKEY_Device_FriendlyName)?;
+            let value = props.GetValue(&PKEY_DeviceInterface_FriendlyName)?;
             let ptr = PropVariantToStringAlloc(&value)?;
             let name = ptr.to_string();
             CoTaskMemFree(Some(ptr.0.cast()));
             let name = name?;
-            let slot = if name == "Speakers (Arctis Game prototype)" {
+            let slot = if name == "Arctis Game prototype" {
                 Some(0)
-            } else if name == "Speakers (Arctis Chat prototype)" {
+            } else if name == "Arctis Chat prototype" {
                 Some(1)
             } else {
                 None
