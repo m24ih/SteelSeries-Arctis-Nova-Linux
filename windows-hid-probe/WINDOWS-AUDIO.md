@@ -12,6 +12,15 @@ were still Chat; the test then restored default. This demonstrates persistence f
 this executable and system, not seamless migration for every Windows audio client.
 Other clients, process restart races and device reconnects still require testing.
 
+The probe reports the stored policy separately from the immediately observed
+active-session endpoint IDs. A missing session or an observation error is not
+confirmation of a move. A later stream change may not appear in that snapshot.
+Windows stream switching depends on how the client activates and handles its
+audio stream; see Microsoft's [automatic stream routing](https://learn.microsoft.com/en-us/windows/win32/coreaudio/automatic-stream-routing)
+and [implementation considerations](https://learn.microsoft.com/en-us/windows/win32/coreaudio/stream-routing-implementation-considerations).
+Those documents describe default-device routing, not a guarantee that this
+undocumented per-application policy moves every existing stream.
+
 To create a test session (silent, 30 seconds by default):
 
 ```powershell

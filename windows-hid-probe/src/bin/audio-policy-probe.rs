@@ -1,6 +1,7 @@
 use arctis_windows_hid_probe::routing::{route, PolicyStore};
 use arctis_windows_hid_probe::sessions::{
-    active_render_endpoint_exists, active_sessions, application_pids, Process,
+    active_render_endpoint_exists, active_sessions, application_pids, observed_route,
+    ObservedRoute, Process,
 };
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -161,7 +162,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &pids,
                 &packed,
             )?;
-            println!("Application routing updated for PIDs {pids:?}.");
+            println!("Application output policy updated for PIDs {pids:?}.");
+            if endpoint == "default" {
+                println!("Stream location was not verified against the default output.");
+            } else {
+                match active_sessions() {
+                    Ok(sessions) => match observed_route(&sessions.endpoint_ids, &pids, endpoint) {
+                        ObservedRoute::AtTarget => println!("All observed active streams are at the target endpoint."),
+                        ObservedRoute::Elsewhere => println!("One or more active streams remain on another endpoint; the application may need to reopen them."),
+                        ObservedRoute::Missing => println!("Stream location could not be verified for every process."),
+                    },
+                    Err(error) => eprintln!("Policy was updated but stream observation failed: {error}"),
+                }
+            }
             return Ok(());
         }
         if let Some(pid) = args.get(1) {

@@ -75,7 +75,39 @@ impl Drop for Process {
 pub struct Sessions {
     pub processes: BTreeMap<u32, Process>,
     pub groups: BTreeMap<String, BTreeMap<String, BTreeSet<u32>>>,
+    pub endpoint_ids: BTreeMap<u32, BTreeSet<String>>,
     pub inaccessible_pids: BTreeSet<u32>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ObservedRoute {
+    AtTarget,
+    Elsewhere,
+    Missing,
+}
+
+/// Evaluate the current snapshot; a missing session is not evidence of a move.
+pub fn observed_route(
+    endpoint_ids: &BTreeMap<u32, BTreeSet<String>>,
+    pids: &[u32],
+    target: &str,
+) -> ObservedRoute {
+    if pids.is_empty()
+        || pids
+            .iter()
+            .any(|pid| endpoint_ids.get(pid).is_none_or(BTreeSet::is_empty))
+    {
+        return ObservedRoute::Missing;
+    }
+    if pids.iter().all(|pid| {
+        endpoint_ids[pid]
+            .iter()
+            .all(|id| id.eq_ignore_ascii_case(target))
+    }) {
+        ObservedRoute::AtTarget
+    } else {
+        ObservedRoute::Elsewhere
+    }
 }
 
 /// Resolve an observed executable path using Windows ordinal case comparison.
@@ -114,6 +146,24 @@ mod tests {
     #[test]
     fn nonexistent_process_is_rejected() {
         assert!(Process::open(0).is_err());
+    }
+
+    #[test]
+    fn observed_route_does_not_confuse_policies_with_stream_locations() {
+        let ids = BTreeMap::from([
+            (1, BTreeSet::from(["Game".into()])),
+            (2, BTreeSet::from(["Chat".into()])),
+        ]);
+        assert_eq!(
+            observed_route(&ids, &[1, 2], "Chat"),
+            ObservedRoute::Elsewhere
+        );
+        assert_eq!(observed_route(&ids, &[2], "CHAT"), ObservedRoute::AtTarget);
+        assert_eq!(
+            observed_route(&ids, &[2, 3], "Chat"),
+            ObservedRoute::Missing
+        );
+        assert_eq!(observed_route(&ids, &[], "Chat"), ObservedRoute::Missing);
     }
 
     #[test]
@@ -181,10 +231,15 @@ pub fn active_sessions() -> windows::core::Result<Sessions> {
         let mut result = Sessions {
             processes: BTreeMap::new(),
             groups: BTreeMap::new(),
+            endpoint_ids: BTreeMap::new(),
             inaccessible_pids: BTreeSet::new(),
         };
         for index in 0..endpoints.GetCount()? {
             let endpoint = endpoints.Item(index)?;
+            let endpoint_id_ptr = endpoint.GetId()?;
+            let endpoint_id = endpoint_id_ptr.to_string();
+            CoTaskMemFree(Some(endpoint_id_ptr.0.cast()));
+            let endpoint_id = endpoint_id?;
             let props = endpoint.OpenPropertyStore(STGM_READ)?;
             let value = props.GetValue(&PKEY_Device_FriendlyName)?;
             let ptr = PropVariantToStringAlloc(&value)?;
@@ -203,6 +258,11 @@ pub fn active_sessions() -> windows::core::Result<Sessions> {
                 if pid == 0 || pid == std::process::id() {
                     continue;
                 }
+                result
+                    .endpoint_ids
+                    .entry(pid)
+                    .or_default()
+                    .insert(endpoint_id.clone());
                 if !result.processes.contains_key(&pid) {
                     match Process::open(pid) {
                         Ok(process) => {
