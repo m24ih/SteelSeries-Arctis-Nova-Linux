@@ -2,7 +2,7 @@ use std::ffi::c_void;
 use windows::core::{define_interface, IInspectable_Vtbl, Interface, HRESULT, HSTRING};
 use windows::Win32::System::WinRT::{RoGetActivationFactory, RoInitialize, RO_INIT_MULTITHREADED};
 
-// Undocumented Windows 10 21H2+ interface; probe activation only, do not mutate routing.
+// Undocumented Windows 10 21H2+ interface. Test mode restores the prior per-role policies.
 // Interface IID and method ordering: https://github.com/File-New-Project/EarTrumpet/blob/master/EarTrumpet/Interop/MMDeviceAPI/IAudioPolicyConfigFactoryVariantFor21H2.cs
 define_interface!(
     IAudioPolicyProbe,
@@ -17,25 +17,89 @@ pub struct IAudioPolicyProbe_Vtbl {
     pub get: unsafe extern "system" fn(*mut c_void, u32, i32, i32, *mut *mut c_void) -> HRESULT,
 }
 
+unsafe fn get_policy(
+    factory: &IAudioPolicyProbe,
+    pid: u32,
+    role: i32,
+) -> windows::core::Result<HSTRING> {
+    let mut value = std::ptr::null_mut();
+    (factory.vtable().get)(factory.as_raw(), pid, 0, role, &mut value).ok()?;
+    Ok(std::mem::transmute::<*mut c_void, HSTRING>(value))
+}
+
+unsafe fn set_policy(
+    factory: &IAudioPolicyProbe,
+    pid: u32,
+    role: i32,
+    value: &HSTRING,
+) -> windows::core::Result<()> {
+    let raw: *mut c_void = std::mem::transmute_copy(value);
+    (factory.vtable().set)(factory.as_raw(), pid, 0, role, raw).ok()
+}
+
+struct Restore<'a> {
+    factory: &'a IAudioPolicyProbe,
+    pid: u32,
+    old: [HSTRING; 2],
+}
+impl Drop for Restore<'_> {
+    fn drop(&mut self) {
+        for role in 0..2 {
+            if let Err(error) =
+                unsafe { set_policy(self.factory, self.pid, role, &self.old[role as usize]) }
+            {
+                eprintln!("Failed to restore role {role}: {error}");
+            } else {
+                println!("Restored role {role}");
+            }
+        }
+    }
+}
+
 fn main() -> windows::core::Result<()> {
     unsafe {
         RoInitialize(RO_INIT_MULTITHREADED)?;
         let factory: IAudioPolicyProbe =
             RoGetActivationFactory(&HSTRING::from("Windows.Media.Internal.AudioPolicyConfig"))?;
-        if let Some(pid) = std::env::args().nth(1) {
+        let args: Vec<String> = std::env::args().collect();
+        if let Some(pid) = args.get(1) {
             let pid: u32 = pid.parse().expect("PID must be an integer");
-            for role in 0..=1 {
-                let mut value = std::ptr::null_mut();
-                let result = (factory.vtable().get)(factory.as_raw(), pid, 0, role, &mut value);
-                if result.is_ok() {
-                    let hstring: HSTRING = std::mem::transmute(value);
-                    println!("role={role}: {}", hstring.to_string_lossy());
-                } else {
-                    println!("role={role}: {result:?}");
+            let old = [get_policy(&factory, pid, 0)?, get_policy(&factory, pid, 1)?];
+            println!(
+                "Original policies: console={:?} multimedia={:?}",
+                old[0].to_string_lossy(),
+                old[1].to_string_lossy()
+            );
+            if let Some(endpoint) = args.get(2) {
+                let restore = Restore {
+                    factory: &factory,
+                    pid,
+                    old,
+                };
+                let packed = HSTRING::from(format!(
+                    r"\\?\SWD#MMDEVAPI#{endpoint}#{{e6327cad-dcec-4949-ae8a-991e976a79d2}}"
+                ));
+                for role in 0..2 {
+                    set_policy(&factory, pid, role, &packed)?;
+                }
+                println!("Test policy applied for 10 seconds");
+                for role in 0..2 {
+                    println!(
+                        "role={role}: {}",
+                        get_policy(&factory, pid, role)?.to_string_lossy()
+                    );
+                }
+                std::thread::sleep(std::time::Duration::from_secs(10));
+                drop(restore);
+                for role in 0..2 {
+                    println!(
+                        "After restore role={role}: {}",
+                        get_policy(&factory, pid, role)?.to_string_lossy()
+                    );
                 }
             }
         }
     }
-    println!("Windows 21H2+ audio policy interface activated; no routing changed.");
+    println!("Audio policy probe finished.");
     Ok(())
 }
