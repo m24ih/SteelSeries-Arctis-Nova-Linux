@@ -1,5 +1,7 @@
 use arctis_windows_hid_probe::routing::{route, PolicyStore};
-use arctis_windows_hid_probe::sessions::{active_render_endpoint_exists, active_sessions, Process};
+use arctis_windows_hid_probe::sessions::{
+    active_render_endpoint_exists, active_sessions, application_pids, Process,
+};
 use std::collections::BTreeMap;
 use std::ffi::c_void;
 use windows::core::{define_interface, IInspectable_Vtbl, Interface, HRESULT, HSTRING};
@@ -106,19 +108,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if !sessions.inaccessible_pids.is_empty() {
                     return Err(format!("Cannot identify active processes {:?}; refusing partial application routing", sessions.inaccessible_pids).into());
                 }
-                let groups: Vec<_> = sessions
-                    .groups
-                    .iter()
-                    .filter(|(candidate, _)| candidate.eq_ignore_ascii_case(path))
+                let pids: Vec<u32> = application_pids(&sessions.groups, path)?
+                    .into_iter()
                     .collect();
-                if groups.len() != 1 {
-                    return Err("Application path is missing or ambiguous".into());
+                if pids.is_empty() {
+                    return Err("Application path has no active sessions".into());
                 }
-                let pids: Vec<u32> = groups[0]
-                    .1
-                    .values()
-                    .flat_map(|pids| pids.iter().copied())
-                    .collect();
                 processes = sessions.processes;
                 pids
             } else {

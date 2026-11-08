@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use windows::core::{Interface, PWSTR};
 use windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT};
+use windows::Win32::Globalization::{CompareStringOrdinal, CSTR_EQUAL};
 use windows::Win32::Media::Audio::{
     eRender, AudioSessionStateActive, IAudioSessionControl2, IAudioSessionManager2,
     IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
@@ -77,6 +78,28 @@ pub struct Sessions {
     pub inaccessible_pids: BTreeSet<u32>,
 }
 
+/// Resolve an observed executable path using Windows ordinal case comparison.
+pub fn application_pids(
+    groups: &BTreeMap<String, BTreeMap<String, BTreeSet<u32>>>,
+    path: &str,
+) -> windows::core::Result<BTreeSet<u32>> {
+    let requested: Vec<u16> = path.encode_utf16().collect();
+    let mut result = BTreeSet::new();
+    for (candidate, outputs) in groups {
+        let candidate: Vec<u16> = candidate.encode_utf16().collect();
+        let comparison = unsafe { CompareStringOrdinal(&requested, &candidate, true) };
+        if comparison.0 == 0 {
+            return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
+                0x80004005u32 as i32,
+            )));
+        }
+        if comparison == CSTR_EQUAL {
+            result.extend(outputs.values().flat_map(|pids| pids.iter().copied()));
+        }
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,6 +114,31 @@ mod tests {
     #[test]
     fn nonexistent_process_is_rejected() {
         assert!(Process::open(0).is_err());
+    }
+
+    #[test]
+    fn groups_windows_unicode_paths_and_excludes_other_paths() {
+        let groups = BTreeMap::from([
+            (
+                r"C:\Kullanici\çanta\app.exe".to_string(),
+                BTreeMap::from([("Game".into(), BTreeSet::from([1, 2]))]),
+            ),
+            (
+                r"c:\KULLANICI\ÇANTA\APP.EXE".to_string(),
+                BTreeMap::from([("Chat".into(), BTreeSet::from([2, 3]))]),
+            ),
+            (
+                r"D:\Kullanici\çanta\app.exe".to_string(),
+                BTreeMap::from([("Game".into(), BTreeSet::from([4]))]),
+            ),
+        ]);
+        assert_eq!(
+            application_pids(&groups, r"C:\KULLANICI\ÇANTA\APP.EXE").unwrap(),
+            BTreeSet::from([1, 2, 3])
+        );
+        assert!(application_pids(&groups, r"C:\other\app.exe")
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
