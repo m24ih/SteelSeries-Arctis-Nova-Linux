@@ -1,3 +1,4 @@
+use arctis_windows_hid_probe::routing::{route, PolicyStore};
 use std::ffi::c_void;
 use windows::core::{define_interface, IInspectable_Vtbl, Interface, HRESULT, HSTRING};
 use windows::Win32::System::WinRT::{RoGetActivationFactory, RoInitialize, RO_INIT_MULTITHREADED};
@@ -37,6 +38,21 @@ unsafe fn set_policy(
     (factory.vtable().set)(factory.as_raw(), pid, 0, role, raw).ok()
 }
 
+struct WindowsPolicyStore<'a>(&'a IAudioPolicyProbe);
+
+impl PolicyStore for WindowsPolicyStore<'_> {
+    type Value = HSTRING;
+    type Error = windows::core::Error;
+
+    fn read(&mut self, pid: u32, role: i32) -> Result<HSTRING, Self::Error> {
+        unsafe { get_policy(self.0, pid, role) }
+    }
+
+    fn write(&mut self, pid: u32, role: i32, value: &HSTRING) -> Result<(), Self::Error> {
+        unsafe { set_policy(self.0, pid, role, value) }
+    }
+}
+
 struct Restore<'a> {
     factory: &'a IAudioPolicyProbe,
     pid: u32,
@@ -60,17 +76,23 @@ impl Drop for Restore<'_> {
     }
 }
 
-fn main() -> windows::core::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         RoInitialize(RO_INIT_MULTITHREADED)?;
         let factory: IAudioPolicyProbe =
             RoGetActivationFactory(&HSTRING::from("Windows.Media.Internal.AudioPolicyConfig"))?;
         let args: Vec<String> = std::env::args().collect();
         if args.get(1).is_some_and(|value| value == "--set") {
-            let pid: u32 = args
+            let pids: Vec<u32> = args
                 .get(2)
-                .and_then(|value| value.parse().ok())
-                .filter(|&value| value != 0)
+                .and_then(|value| {
+                    value
+                        .split(',')
+                        .map(str::parse)
+                        .collect::<Result<Vec<u32>, _>>()
+                        .ok()
+                })
+                .filter(|values| !values.is_empty() && values.iter().all(|&value| value != 0))
                 .ok_or_else(|| {
                     windows::core::Error::from_hresult(windows::core::HRESULT(0x80070057u32 as i32))
                 })?;
@@ -80,7 +102,6 @@ fn main() -> windows::core::Result<()> {
                 .ok_or_else(|| {
                     windows::core::Error::from_hresult(windows::core::HRESULT(0x80070057u32 as i32))
                 })?;
-            let old = [get_policy(&factory, pid, 0)?, get_policy(&factory, pid, 1)?];
             let packed = if endpoint == "default" {
                 HSTRING::new()
             } else {
@@ -88,24 +109,8 @@ fn main() -> windows::core::Result<()> {
                     r"\\?\SWD#MMDEVAPI#{endpoint}#{{e6327cad-dcec-4949-ae8a-991e976a79d2}}"
                 ))
             };
-            let mut restore = Restore {
-                factory: &factory,
-                pid,
-                old,
-                armed: true,
-            };
-            for role in 0..2 {
-                set_policy(&factory, pid, role, &packed)?;
-            }
-            for role in 0..2 {
-                if get_policy(&factory, pid, role)? != packed {
-                    return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
-                        0x80004005u32 as i32,
-                    )));
-                }
-            }
-            restore.armed = false;
-            println!("Application routing updated for PID {pid}.");
+            route(&mut WindowsPolicyStore(&factory), &pids, &packed)?;
+            println!("Application routing updated for PIDs {pids:?}.");
             return Ok(());
         }
         if let Some(pid) = args.get(1) {
