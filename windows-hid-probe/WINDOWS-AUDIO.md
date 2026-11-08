@@ -1,5 +1,15 @@
 # Windows audio prototype
 
+## Language preference backend
+
+`language` stores a versioned preference (`system`, `turkish`, or `english`)
+in a caller-supplied JSON path. Missing settings use the Windows user UI language,
+falling back to English for unsupported languages. An installer can initialize
+the preference once without replacing an existing user choice; later changes
+can switch back to following Windows. The installer, settings location and UI
+are not connected yet. `GetUserDefaultUILanguage` returns a language identifier;
+custom UI language packs may need additional detection in a future integration.
+
 ## USB/IP cleanup safety
 
 Before detaching an attached port, the prototype checks the current `usbip port`
