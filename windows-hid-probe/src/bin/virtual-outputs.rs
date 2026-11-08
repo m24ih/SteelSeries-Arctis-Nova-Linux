@@ -1,16 +1,23 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use usbip_audio::uac2::{Uac2Config, Uac2Device, Uac2Streams};
 use usbip_audio::{MonotonicClock, Server};
 
 #[derive(Default)]
-struct Counter(AtomicU64);
+struct Counter(Mutex<VecDeque<f32>>);
 
 impl Uac2Streams for Counter {
     fn playback(&self, _frame: u64, samples: &[i32]) {
-        self.0
-            .fetch_add((samples.len() / 2) as u64, Ordering::Relaxed);
+        if let Ok(mut queue) = self.0.lock() {
+            for &sample in samples {
+                if queue.len() >= 9600 {
+                    queue.pop_front();
+                }
+                queue.push_back(sample as f32 / 2147483648.0);
+            }
+        }
     }
 
     fn capture(&self, _frame: u64, samples: &mut [i32]) {
@@ -19,8 +26,44 @@ impl Uac2Streams for Counter {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let host = cpal::default_host();
+    let mut matching = host
+        .output_devices()?
+        .filter(|d| d.name().is_ok_and(|n| n.contains("Arctis Nova 7")));
+    let output = matching.next().ok_or("Arctis Nova 7 output not found")?;
+    if matching.next().is_some() {
+        return Err("Multiple Arctis Nova 7 outputs found".into());
+    }
+    let supported = output
+        .supported_output_configs()?
+        .find(|c| {
+            c.channels() == 2
+                && c.sample_format() == cpal::SampleFormat::F32
+                && c.min_sample_rate().0 <= 48000
+                && c.max_sample_rate().0 >= 48000
+        })
+        .ok_or("Headset must support stereo 48 kHz f32 shared output")?;
+    let config = supported.with_sample_rate(cpal::SampleRate(48000)).config();
+    let game = Arc::new(Counter::default());
+    let chat = Arc::new(Counter::default());
+    let (game_out, chat_out) = (game.clone(), chat.clone());
+    let stream = output.build_output_stream(
+        &config,
+        move |data: &mut [f32], _| {
+            let mut a = game_out.0.lock().ok();
+            let mut b = chat_out.0.lock().ok();
+            for sample in data {
+                let x = a.as_mut().and_then(|q| q.pop_front()).unwrap_or(0.0);
+                let y = b.as_mut().and_then(|q| q.pop_front()).unwrap_or(0.0);
+                *sample = ((x + y) * 0.5).clamp(-1.0, 1.0);
+            }
+        },
+        |error| eprintln!("Audio output error: {error}"),
+        None,
+    )?;
+    stream.play()?;
     let server = Server::start(0, Arc::new(MonotonicClock::new()))?;
-    let mut counters = Vec::new();
+    let counters = [game, chat];
     for (index, name) in ["Game", "Chat"].iter().enumerate() {
         let config = Uac2Config {
             vendor_id: 0x1209,
@@ -36,23 +79,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             capture_name: None,
             capture_connector: false,
         };
-        let counter = Arc::new(Counter::default());
+        let counter = counters[index].clone();
         let device = Uac2Device::new(config, counter.clone()).map_err(std::io::Error::other)?;
         server.add(&format!("1-{}", index + 1), Arc::new(device));
-        counters.push(counter);
     }
     println!(
         "USB/IP server on localhost:{}; devices 1-1 (Game), 1-2 (Chat).",
         server.port()
     );
-    println!("Prototype discards audio; it does not play through the headset.");
+    println!("Mixing both streams to {} at half gain.", output.name()?);
     println!("Use Ctrl+C to stop.");
     loop {
         std::thread::sleep(Duration::from_secs(5));
         println!(
             "Received frames: game={}, chat={}",
-            counters[0].0.load(Ordering::Relaxed),
-            counters[1].0.load(Ordering::Relaxed)
+            counters[0].0.lock().map(|q| q.len()).unwrap_or(0),
+            counters[1].0.lock().map(|q| q.len()).unwrap_or(0)
         );
     }
 }
