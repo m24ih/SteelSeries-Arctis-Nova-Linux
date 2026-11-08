@@ -1,6 +1,6 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use usbip_audio::uac2::{Uac2Config, Uac2Device, Uac2Streams};
@@ -73,11 +73,58 @@ impl Uac2Streams for Counter {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let game = Arc::new(Counter::default());
+    let chat = Arc::new(Counter::default());
+    let (game_out, chat_out) = (game.clone(), chat.clone());
+    std::thread::spawn(move || loop {
+        if let Err(error) = run_output(game_out.clone(), chat_out.clone()) {
+            eprintln!("Headset output unavailable: {error}; retrying");
+        }
+        std::thread::sleep(Duration::from_secs(2));
+    });
+    let game_gain = Arc::new(AtomicU8::new(100));
+    let chat_gain = Arc::new(AtomicU8::new(100));
+    start_controller(game_gain, chat_gain);
+    let server = Server::start(0, Arc::new(MonotonicClock::new()))?;
+    let counters = [game, chat];
+    for (index, name) in ["Game", "Chat"].iter().enumerate() {
+        let config = Uac2Config {
+            vendor_id: 0x1209,
+            product_id: 0x0001,
+            bcd_device: 0x0100,
+            manufacturer: "Arctis prototype".into(),
+            product: format!("Arctis {name} prototype"),
+            serial: format!("arctis-prototype-{}", name.to_lowercase()),
+            sample_rate: 48000,
+            playback_channels: 2,
+            capture_channels: 0,
+            playback_name: Some(format!("Arctis {name}")),
+            capture_name: None,
+            capture_connector: false,
+        };
+        let device =
+            Uac2Device::new(config, counters[index].clone()).map_err(std::io::Error::other)?;
+        server.add(&format!("1-{}", index + 1), Arc::new(device));
+    }
+    println!(
+        "USB/IP server on localhost:{}; devices 1-1 (Game), 1-2 (Chat).",
+        server.port()
+    );
+    loop {
+        std::thread::sleep(Duration::from_secs(5));
+    }
+}
+
+fn run_output(
+    game_out: Arc<Counter>,
+    chat_out: Arc<Counter>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let host = cpal::default_host();
     let mut matching = host
         .output_devices()?
         .filter(|d| d.name().is_ok_and(|n| n.contains("Arctis Nova 7")));
     let output = matching.next().ok_or("Arctis Nova 7 output not found")?;
+    let output_name = output.name()?;
     if matching.next().is_some() {
         return Err("Multiple Arctis Nova 7 outputs found".into());
     }
@@ -91,11 +138,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .ok_or("Headset must support stereo 48 kHz f32 shared output")?;
     let config = supported.with_sample_rate(cpal::SampleRate(48000)).config();
-    let game = Arc::new(Counter::default());
-    let chat = Arc::new(Counter::default());
-    let (game_out, chat_out) = (game.clone(), chat.clone());
-    let game_gain = Arc::new(AtomicU8::new(100));
-    let chat_gain = Arc::new(AtomicU8::new(100));
+    for queue in [&game_out, &chat_out] {
+        if let Ok(mut q) = queue.0.lock() {
+            q.clear();
+        }
+    }
+    let failed = Arc::new(AtomicBool::new(false));
+    let error_flag = failed.clone();
     let stream = output.build_output_stream(
         &config,
         move |data: &mut [f32], _| {
@@ -107,10 +156,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 *sample = ((x + y) * 0.5).clamp(-1.0, 1.0);
             }
         },
-        |error| eprintln!("Audio output error: {error}"),
+        move |error| {
+            eprintln!("Audio output error: {error}");
+            error_flag.store(true, Ordering::Release);
+        },
         None,
     )?;
     stream.play()?;
+    println!("Headset audio output connected: {output_name}");
+    while !failed.load(Ordering::Acquire) {
+        std::thread::sleep(Duration::from_secs(1));
+        if !cpal::default_host()
+            .output_devices()?
+            .any(|d| d.name().is_ok_and(|n| n == output_name))
+        {
+            break;
+        }
+    }
+    drop(stream);
+    Ok(())
+}
+
+fn start_controller(game_gain: Arc<AtomicU8>, chat_gain: Arc<AtomicU8>) {
     let (game_volume, chat_volume) = (game_gain.clone(), chat_gain.clone());
     std::thread::spawn(move || {
         if let Err(error) = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED).ok() } {
@@ -172,39 +239,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::thread::sleep(Duration::from_secs(2));
         }
     });
-    let server = Server::start(0, Arc::new(MonotonicClock::new()))?;
-    let counters = [game, chat];
-    for (index, name) in ["Game", "Chat"].iter().enumerate() {
-        let config = Uac2Config {
-            vendor_id: 0x1209,
-            product_id: 0x0001,
-            bcd_device: 0x0100,
-            manufacturer: "Arctis prototype".into(),
-            product: format!("Arctis {name} prototype"),
-            serial: format!("arctis-prototype-{}", name.to_lowercase()),
-            sample_rate: 48000,
-            playback_channels: 2,
-            capture_channels: 0,
-            playback_name: Some(format!("Arctis {name}")),
-            capture_name: None,
-            capture_connector: false,
-        };
-        let counter = counters[index].clone();
-        let device = Uac2Device::new(config, counter.clone()).map_err(std::io::Error::other)?;
-        server.add(&format!("1-{}", index + 1), Arc::new(device));
-    }
-    println!(
-        "USB/IP server on localhost:{}; devices 1-1 (Game), 1-2 (Chat).",
-        server.port()
-    );
-    println!("Mixing both streams to {} at half gain.", output.name()?);
-    println!("Use Ctrl+C to stop.");
-    loop {
-        std::thread::sleep(Duration::from_secs(5));
-        println!(
-            "Received frames: game={}, chat={}",
-            counters[0].0.lock().map(|q| q.len()).unwrap_or(0),
-            counters[1].0.lock().map(|q| q.len()).unwrap_or(0)
-        );
-    }
 }
