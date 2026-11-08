@@ -1,5 +1,13 @@
 # Windows audio prototype
 
+## USB/IP cleanup safety
+
+Before detaching an attached port, the prototype checks the current `usbip port`
+listing against its server TCP port and exported bus ID. Missing ports are skipped;
+unrecognized output or a different owner causes an error. The external list and
+detach commands are separate, so a port can still change between them. A normal
+Ctrl+C cleanup and concurrent port reuse have not yet been verified on the device.
+
 ## Application routing integration test (2026-11-09)
 
 `examples/silent-session.rs` starts a short-lived silent stream on the default

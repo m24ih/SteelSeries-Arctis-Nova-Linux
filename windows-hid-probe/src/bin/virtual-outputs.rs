@@ -1,5 +1,8 @@
+use arctis_windows_hid_probe::usbip_ownership::owned_port;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::collections::VecDeque;
+use std::path::Path;
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -119,11 +122,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match usbip_exe::attach(&usbip, server.port(), busid) {
             Ok(port) => {
                 println!("Attached {busid} to USB/IP port {port}");
-                attached.push(port);
+                attached.push((port, busid));
             }
             Err(error) => {
-                for port in attached {
-                    if let Err(e) = usbip_exe::detach(&usbip, port) {
+                for (port, busid) in attached {
+                    if let Err(e) = detach_owned(&usbip, port, server.port(), busid) {
                         eprintln!("Cleanup failed: {e}");
                     }
                 }
@@ -136,8 +139,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::thread::sleep(Duration::from_secs(5));
     }
     let mut cleanup_failed = false;
-    for port in attached {
-        if let Err(error) = usbip_exe::detach(&usbip, port) {
+    for (port, busid) in attached {
+        if let Err(error) = detach_owned(&usbip, port, server.port(), busid) {
             eprintln!("Cleanup failed: {error}");
             cleanup_failed = true;
         }
@@ -146,6 +149,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("One or more prototype outputs could not be detached".into());
     }
     Ok(())
+}
+
+fn detach_owned(usbip: &Path, port: u32, server_port: u16, busid: &str) -> Result<(), String> {
+    let listing = Command::new(usbip)
+        .arg("port")
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !listing.status.success() {
+        return Err(format!("Cannot list USB/IP ports: {}", listing.status));
+    }
+    let listing = std::str::from_utf8(&listing.stdout).map_err(|e| e.to_string())?;
+    if !owned_port(listing, port, server_port, busid)? {
+        println!("USB/IP port {port} is no longer attached; skipping");
+        return Ok(());
+    }
+    usbip_exe::detach(usbip, port)
 }
 
 fn run_output(
