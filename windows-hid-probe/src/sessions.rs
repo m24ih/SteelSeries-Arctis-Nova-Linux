@@ -74,9 +74,16 @@ impl Drop for Process {
 
 pub struct Sessions {
     pub processes: BTreeMap<u32, Process>,
-    pub groups: BTreeMap<String, BTreeMap<String, BTreeSet<u32>>>,
+    pub groups: BTreeMap<String, BTreeMap<OutputEndpoint, BTreeSet<u32>>>,
     pub endpoint_ids: BTreeMap<u32, BTreeSet<String>>,
     pub inaccessible_pids: BTreeSet<u32>,
+}
+
+/// The display name can change or be shared by different endpoints.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OutputEndpoint {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -112,7 +119,7 @@ pub fn observed_route(
 
 /// Resolve an observed executable path using Windows ordinal case comparison.
 pub fn application_pids(
-    groups: &BTreeMap<String, BTreeMap<String, BTreeSet<u32>>>,
+    groups: &BTreeMap<String, BTreeMap<OutputEndpoint, BTreeSet<u32>>>,
     path: &str,
 ) -> windows::core::Result<BTreeSet<u32>> {
     let requested: Vec<u16> = path.encode_utf16().collect();
@@ -168,18 +175,22 @@ mod tests {
 
     #[test]
     fn groups_windows_unicode_paths_and_excludes_other_paths() {
+        let endpoint = |id: &str| OutputEndpoint {
+            id: id.into(),
+            name: "same name".into(),
+        };
         let groups = BTreeMap::from([
             (
                 r"C:\Kullanici\çanta\app.exe".to_string(),
-                BTreeMap::from([("Game".into(), BTreeSet::from([1, 2]))]),
+                BTreeMap::from([(endpoint("game"), BTreeSet::from([1, 2]))]),
             ),
             (
                 r"c:\KULLANICI\ÇANTA\APP.EXE".to_string(),
-                BTreeMap::from([("Chat".into(), BTreeSet::from([2, 3]))]),
+                BTreeMap::from([(endpoint("chat"), BTreeSet::from([2, 3]))]),
             ),
             (
                 r"D:\Kullanici\çanta\app.exe".to_string(),
-                BTreeMap::from([("Game".into(), BTreeSet::from([4]))]),
+                BTreeMap::from([(endpoint("game"), BTreeSet::from([4]))]),
             ),
         ]);
         assert_eq!(
@@ -189,6 +200,25 @@ mod tests {
         assert!(application_pids(&groups, r"C:\other\app.exe")
             .unwrap()
             .is_empty());
+    }
+
+    #[test]
+    fn endpoints_with_the_same_display_name_remain_distinct() {
+        let first = OutputEndpoint {
+            id: "device-a".into(),
+            name: "Speakers".into(),
+        };
+        let second = OutputEndpoint {
+            id: "device-b".into(),
+            name: "Speakers".into(),
+        };
+        let outputs = BTreeMap::from([(first, BTreeSet::from([1])), (second, BTreeSet::from([2]))]);
+        assert_eq!(outputs.len(), 2);
+        let groups = BTreeMap::from([(r"C:\app.exe".into(), outputs)]);
+        assert_eq!(
+            application_pids(&groups, r"C:\app.exe").unwrap(),
+            BTreeSet::from([1, 2])
+        );
     }
 
     #[test]
@@ -286,7 +316,10 @@ pub fn active_sessions() -> windows::core::Result<Sessions> {
                     .groups
                     .entry(path.clone())
                     .or_default()
-                    .entry(name.clone())
+                    .entry(OutputEndpoint {
+                        id: endpoint_id.clone(),
+                        name: name.clone(),
+                    })
                     .or_default()
                     .insert(pid);
             }

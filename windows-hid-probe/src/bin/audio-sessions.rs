@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for (path, outputs) in &sessions.groups {
         println!("{path}");
         for (output, pids) in outputs {
-            println!("  {output}: {pids:?}");
+            println!("  {}: {pids:?}\n    {}", output.name, output.id);
         }
     }
     Ok(())
