@@ -1,5 +1,27 @@
 # Windows audio prototype
 
+## Application routing integration test (2026-11-09)
+
+`examples/silent-session.rs` starts a short-lived silent stream on the default
+output. Two instances were discovered under the same executable path on Game.
+The application routing probe set both processes' console and multimedia policies
+to Chat, then restored their originally empty policies. Their existing CPAL streams
+remained on Game despite the policy change. After applying Chat again and
+restarting the test executable, its new session appeared on Chat and both policies
+were still Chat; the test then restored default. This demonstrates persistence for
+this executable and system, not seamless migration for every Windows audio client.
+Other clients, process restart races and device reconnects still require testing.
+
+To create a test session (silent, 30 seconds by default):
+
+```powershell
+cargo run --manifest-path windows-hid-probe/Cargo.toml --example silent-session -- 30
+```
+
+The probe writes persistent per-application Windows settings. Record the original
+policies and restore them after an experiment; resetting to `default` is correct
+only when the original policies were empty.
+
 The HID prototype reads the wheel independently of Sonar. `endpoints` lists active
 Windows render endpoints and their identifiers without changing settings:
 
