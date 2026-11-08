@@ -111,12 +111,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     )?;
     stream.play()?;
-    let api = hidapi::HidApi::new()?;
-    let info = api
-        .device_list()
-        .find(|d| d.vendor_id() == 0x1038 && d.product_id() == 0x22a1 && d.usage_page() == 0xff00)
-        .ok_or("ChatMix HID interface not found")?;
-    let hid = info.open_device(&api)?;
     let (game_volume, chat_volume) = (game_gain.clone(), chat_gain.clone());
     std::thread::spawn(move || {
         if let Err(error) = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED).ok() } {
@@ -148,19 +142,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::spawn(move || {
         let mut buf = [0u8; 256];
         loop {
-            match hid.read_timeout(&mut buf, 500) {
-                Ok(n) => {
-                    if let [0x45, game @ 0..=100, chat @ 0..=100, ..] = &buf[..n] {
-                        game_gain.store(*game, Ordering::Relaxed);
-                        chat_gain.store(*chat, Ordering::Relaxed);
-                        println!("ChatMix game={game}% chat={chat}%");
+            let hid = hidapi::HidApi::new().ok().and_then(|api| {
+                api.device_list()
+                    .find(|d| {
+                        d.vendor_id() == 0x1038
+                            && d.product_id() == 0x22a1
+                            && d.usage_page() == 0xff00
+                    })
+                    .and_then(|device| device.open_device(&api).ok())
+            });
+            if let Some(hid) = hid {
+                println!("ChatMix HID connected");
+                loop {
+                    match hid.read_timeout(&mut buf, 500) {
+                        Ok(n) => {
+                            if let [0x45, game @ 0..=100, chat @ 0..=100, ..] = &buf[..n] {
+                                game_gain.store(*game, Ordering::Relaxed);
+                                chat_gain.store(*chat, Ordering::Relaxed);
+                                println!("ChatMix game={game}% chat={chat}%");
+                            }
+                        }
+                        Err(error) => {
+                            eprintln!("ChatMix disconnected: {error}; retrying");
+                            break;
+                        }
                     }
                 }
-                Err(error) => {
-                    eprintln!("ChatMix disconnected: {error}");
-                    break;
-                }
             }
+            std::thread::sleep(Duration::from_secs(2));
         }
     });
     let server = Server::start(0, Arc::new(MonotonicClock::new()))?;
