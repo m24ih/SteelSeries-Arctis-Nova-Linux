@@ -3,50 +3,45 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SteelSeries Arctis Nova 7 — Donanım Kontrol Paneli</title>
+<title>SteelSeries Arctis Nova 7 — Donanım Kontrolü</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" href="/favicon.ico" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   color-scheme: dark;
 
-  /* ── Keychron × SteelSeries Studio Color System ── */
-  --bg-canvas: #0e0e11;
-  --bg-header: #141418;
-  --bg-panel: #18181e;
-  --bg-card: #1f1f26;
-  --bg-card-hover: #262630;
-  --bg-input: #121216;
+  /* ── SteelSeries Nordic Minimalist Dark Palette ── */
+  --bg-canvas: #0c0c0e;
+  --bg-panel: #141417;
+  --bg-card: #1b1b20;
+  --bg-card-hover: #222228;
+  --bg-input: #111114;
 
-  --border-subtle: #292934;
-  --border-strong: #383848;
-  --border-focus: #e55000;
+  --border-subtle: #24242b;
+  --border-strong: #32323c;
+  --border-card: #202026;
 
-  /* Mat SteelSeries Turuncusu (Neon parlamalar yok, göz yormayan dengeli ton) */
-  --accent: #e55000;
-  --accent-hover: #fa5c07;
-  --accent-dim: rgba(229, 80, 0, 0.12);
-  --accent-border: rgba(229, 80, 0, 0.35);
+  /* SteelSeries Accent: Minimal & Purposeful */
+  --accent: #ff5200;
+  --accent-hover: #ff6a1f;
+  --accent-soft: rgba(255, 82, 0, 0.12);
 
-  --text-primary: #f2f2f5;
-  --text-secondary: #a2a2b2;
-  --text-muted: #6a6a7c;
-  --text-inverse: #0e0e11;
+  --text-main: #f5f5f7;
+  --text-dim: #9898a6;
+  --text-muted: #5e5e6e;
 
   --status-green: #10b981;
-  --status-green-dim: rgba(16, 185, 129, 0.12);
   --status-amber: #f59e0b;
-  --status-amber-dim: rgba(245, 158, 11, 0.12);
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-lg: 8px;
 }
 
 * {
@@ -58,219 +53,184 @@
 html, body {
   min-height: 100%;
   background-color: var(--bg-canvas);
-  color: var(--text-primary);
+  color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-
-/* ── Top Header (Keychron Launcher Bar) ── */
-.app-header {
-  background: var(--bg-header);
+/* ── Top Bar ── */
+.navbar {
+  background: var(--bg-panel);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;
-  z-index: 100;
-  padding: 0.6rem 1.25rem;
+  z-index: 50;
+  padding: 0.75rem 1.5rem;
 }
 
-.header-inner {
-  max-width: 1180px;
+.navbar-inner {
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
 }
 
-.brand-section {
+.brand-wrap {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
-.brand-icon {
+.brand-logo {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-md);
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
 }
 
-.brand-title {
-  font-size: 0.95rem;
+.brand-text h1 {
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
 }
 
-.brand-badge {
-  font-size: 0.7rem;
+.brand-text p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
   font-family: var(--font-mono);
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
 }
 
-/* Keychron Tab Bar */
-.header-nav {
+/* Clean Tabs (Underline Accent) */
+.nav-tabs {
   display: flex;
-  align-items: center;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 3px;
+  gap: 0.25rem;
 }
 
-.nav-tab-btn {
+.tab-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  padding: 0.45rem 0.9rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.15s ease;
+  position: relative;
 }
 
-.nav-tab-btn:hover {
-  color: var(--text-primary);
-}
-
-.nav-tab-btn.active {
+.tab-btn:hover {
+  color: var(--text-main);
   background: var(--bg-card);
-  color: var(--accent);
+}
+
+.tab-btn.active {
+  color: var(--text-main);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  background: var(--bg-card);
 }
 
-/* Header Status Badges & Quick Actions */
-.header-status {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 
-.status-chip {
+/* Right Status Chips */
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  background: var(--bg-panel);
+  gap: 0.75rem;
+}
+
+.chip {
+  background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  padding: 0.35rem 0.65rem;
   border-radius: var(--radius-md);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
-.status-dot {
+.chip-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: var(--text-muted);
+  background: var(--text-muted);
 }
-.status-dot.connected {
-  background-color: var(--status-green);
+.chip-dot.connected {
+  background: var(--status-green);
 }
-.status-dot.warning {
-  background-color: var(--status-amber);
+.chip-dot.warning {
+  background: var(--status-amber);
 }
 
-.btn-flash-top {
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-  padding: 0.4rem 0.8rem;
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.15s ease;
 }
-.btn-flash-top:hover {
-  background: var(--accent);
-  color: var(--text-inverse);
+.btn-primary:hover {
+  background: var(--accent-hover);
 }
 
-/* ChatMix Header Bar */
-.chatmix-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 7px;
-  width: 100px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  padding: 1px;
-}
-.chatmix-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-}
-.chatmix-bar-fill.game { background: #00bcd4; }
-.chatmix-bar-fill.chat { background: var(--accent); }
-
-/* ── Main Container (Centered & Constrained) ── */
-.main-wrapper {
-  max-width: 1180px;
-  margin: 1.25rem auto;
-  padding: 0 1.25rem 2rem 1.25rem;
+/* ── Content Container ── */
+.container {
+  max-width: 1100px;
+  margin: 1.5rem auto 3rem auto;
+  padding: 0 1.5rem;
 }
 
-.tab-pane {
+.panel {
   display: none;
 }
-.tab-pane.active {
+.panel.active {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  animation: fadeIn 0.15s ease;
 }
 
-/* ── TAB 1: 10-Band EQ Studio ── */
-.eq-top-toolbar {
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── 1. Parametric EQ Tab ── */
+.eq-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -278,7 +238,7 @@ html, body {
   flex-wrap: wrap;
 }
 
-.channel-selector {
+.channel-pills {
   display: flex;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
@@ -287,135 +247,133 @@ html, body {
   gap: 3px;
 }
 
-.channel-btn {
+.channel-pill-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  padding: 0.45rem 1rem;
   border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  padding: 0.5rem 1rem;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   transition: all 0.15s;
 }
-.channel-btn:hover {
-  color: var(--text-primary);
+.channel-pill-btn:hover {
+  color: var(--text-main);
 }
-.channel-btn.active {
+.channel-pill-btn.active {
   background: var(--bg-card);
-  color: var(--accent);
+  color: var(--text-main);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-.eq-toolbar-actions {
+.eq-btn-group {
   display: flex;
-  align-items: center;
   gap: 0.5rem;
 }
 
-.btn-studio {
+.btn-secondary {
   background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
   border-radius: var(--radius-md);
+  padding: 0.5rem 0.9rem;
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
-.btn-studio:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
+.btn-secondary:hover {
+  color: var(--text-main);
+  border-color: var(--text-muted);
 }
 
-/* Preset Chips */
-.preset-bar {
+/* Presets Bar */
+.presets-wrap {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.preset-chip {
-  padding: 0.4rem 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border-radius: 999px;
+.preset-btn {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-dim);
   cursor: pointer;
   transition: all 0.15s;
 }
-.preset-chip:hover {
+.preset-btn:hover {
+  color: var(--text-main);
   border-color: var(--border-strong);
-  color: var(--text-primary);
 }
-.preset-chip.active {
-  background: var(--accent-dim);
-  border-color: var(--accent-border);
+.preset-btn.active {
+  background: var(--bg-card);
+  border-color: var(--border-strong);
   color: var(--accent);
   font-weight: 600;
 }
 
-/* SteelSeries Sonar DSP Curve Canvas */
-.curve-card {
+/* EQ Canvas Card */
+.canvas-card {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
-.curve-card-header {
+.canvas-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.6rem;
-  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
 }
-.curve-title {
+.canvas-card-title {
+  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
-.curve-info {
+.canvas-card-preset {
+  font-size: 0.82rem;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--text-dim);
 }
 
-.canvas-container {
+.canvas-box {
   width: 100%;
-  height: 160px;
+  height: 170px;
+  background: #0f0f13;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   position: relative;
 }
 
 canvas#eq-canvas {
   width: 100%;
   height: 100%;
-  background: #111115;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
   display: block;
 }
 
-/* 10-Band Hardware Faders (Compact & No Overflow) */
-.faders-card {
+/* 10-Band Sliders Card */
+.faders-container {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1rem;
+  padding: 1.5rem 1rem;
 }
 
-.faders-grid {
+.faders-row {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   gap: 0.5rem;
-  max-width: 960px;
+  max-width: 980px;
   margin: 0 auto;
 }
 
@@ -423,57 +381,56 @@ canvas#eq-canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
-.fader-db-val {
+.fader-value {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  height: 18px;
-  line-height: 18px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  height: 20px;
 }
-.fader-cell:hover .fader-db-val,
-.fader-cell.active .fader-db-val {
+.fader-cell:hover .fader-value,
+.fader-cell.active .fader-value {
   color: var(--accent);
+  font-weight: 600;
 }
 
-.fader-track-box {
-  height: 150px;
-  width: 32px;
+.fader-track {
+  height: 155px;
+  width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Standard HTML5 Vertical Range Slider (No rotate overflow) */
-input[type="range"].v-fader {
+input[type="range"].v-slider {
   writing-mode: vertical-lr;
   direction: rtl;
-  width: 24px;
-  height: 140px;
+  width: 28px;
+  height: 145px;
   vertical-align: middle;
   background: transparent;
   cursor: pointer;
   accent-color: var(--accent);
 }
 
-.fader-freq-lbl {
+.fader-label {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
-/* ── TAB 2: Hardware Controls (Keychron Cards) ── */
-.hw-controls-grid {
+/* ── 2. Hardware Controls Tab ── */
+.controls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 1.25rem;
 }
 
-.hw-box {
+.card {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -481,43 +438,37 @@ input[type="range"].v-fader {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.15rem;
 }
 
-.hw-box-head {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.hw-box-title {
+.card-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
-
-.hw-box-desc {
+.card-desc {
   font-size: 0.82rem;
-  color: var(--text-secondary);
+  color: var(--text-dim);
+  margin-top: 0.2rem;
 }
 
-/* Horizontal Hardware Slider */
-.hw-slider-row {
+/* Horizontal Range Slider */
+.slider-control-box {
   display: flex;
   align-items: center;
   gap: 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
 }
 
-.hw-slider-num {
+.slider-val-txt {
   font-family: var(--font-mono);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--accent);
-  min-width: 60px;
+  min-width: 65px;
   text-align: right;
 }
 
@@ -532,7 +483,7 @@ input[type="range"].h-slider {
 }
 
 /* Segmented Buttons */
-.hw-btn-group {
+.segment-box {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
   gap: 4px;
@@ -542,28 +493,28 @@ input[type="range"].h-slider {
   padding: 3px;
 }
 
-.hw-segment-btn {
+.seg-item-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
-  padding: 0.55rem 0.6rem;
+  color: var(--text-dim);
+  padding: 0.6rem 0.5rem;
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
 }
-.hw-segment-btn:hover {
-  color: var(--text-primary);
+.seg-item-btn:hover {
+  color: var(--text-main);
 }
-.hw-segment-btn.active {
-  background: var(--bg-header);
-  color: var(--accent);
+.seg-item-btn.active {
+  background: var(--bg-panel);
+  color: var(--text-main);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  border: 1px solid var(--border-strong);
 }
 
-/* Keychron Mechanical Toggle Row */
+/* Toggle Switches */
 .toggle-card {
   display: flex;
   align-items: center;
@@ -571,7 +522,7 @@ input[type="range"].h-slider {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.15rem 1.25rem;
+  padding: 1.25rem;
 }
 
 .switch {
@@ -586,7 +537,7 @@ input[type="range"].h-slider {
   width: 0;
   height: 0;
 }
-.switch-slider {
+.switch-knob {
   position: absolute;
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -594,53 +545,53 @@ input[type="range"].h-slider {
   transition: 0.2s;
   border-radius: 24px;
 }
-.switch-slider:before {
+.switch-knob:before {
   position: absolute;
   content: "";
   height: 18px;
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: var(--text-primary);
+  background-color: #fff;
   transition: 0.2s;
   border-radius: 50%;
 }
-input:checked + .switch-slider {
+input:checked + .switch-knob {
   background-color: var(--accent);
 }
-input:checked + .switch-slider:before {
+input:checked + .switch-knob:before {
   transform: translateX(20px);
-  background-color: #0e0e11;
+  background-color: #0c0c0e;
 }
 
-/* ── TAB 3: Telemetry View ── */
+/* ── 3. Telemetry Tab ── */
 .telemetry-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
-.telem-card {
+.telem-box {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 1.1rem;
+  padding: 1.15rem;
 }
-.telem-label {
+.telem-box-lbl {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--text-muted);
   text-transform: uppercase;
 }
-.telem-value {
+.telem-box-val {
   font-family: var(--font-mono);
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  color: var(--text-primary);
-  margin-top: 0.35rem;
+  color: var(--text-main);
+  margin-top: 0.4rem;
 }
 
-.json-view-card {
+.raw-box {
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -649,131 +600,96 @@ input:checked + .switch-slider:before {
   flex-direction: column;
   gap: 0.75rem;
 }
-.json-view-header {
+.raw-box-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 pre#raw-telemetry-json {
-  background: #111116;
+  background: #0f0f13;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 1rem;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: #79c0ff;
-  max-height: 400px;
+  max-height: 420px;
   overflow: auto;
 }
 
-/* ── Toast / Notification ── */
-.toast {
+/* ── Toast ── */
+.toast-notice {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  background: var(--bg-panel);
-  color: var(--text-primary);
-  border: 1px solid var(--accent-border);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
   padding: 0.75rem 1.25rem;
   border-radius: var(--radius-md);
   font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
   transition: all 0.2s ease;
   z-index: 9999;
 }
-.toast.show {
+.toast-notice.show {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
-}
-.toast-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 </style>
 </head>
 <body>
 
-<!-- ── App Top Header (Keychron Studio Bar) ── -->
-<header class="app-header">
-  <div class="header-inner">
-    <!-- Brand -->
-    <div class="brand-section">
-      <div class="brand-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+<!-- ── Navigation Bar ── -->
+<header class="navbar">
+  <div class="navbar-inner">
+    <div class="brand-wrap">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
           <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
         </svg>
       </div>
-      <div class="brand-title">
-        <span id="app-title">Arctis Nova 7</span>
-        <span class="brand-badge">STUDIO</span>
+      <div class="brand-text">
+        <h1 id="app-title">Arctis Nova 7</h1>
+        <p>STEELSERIES ENGINE</p>
       </div>
     </div>
 
-    <!-- Keychron Navigation Tabs -->
-    <nav class="header-nav">
-      <button type="button" class="nav-tab-btn active" data-tab="tab-eq" onclick="switchTab('tab-eq')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-        </svg>
+    <!-- Minimalist Tabs -->
+    <nav class="nav-tabs">
+      <button type="button" class="tab-btn active" data-tab="tab-eq" onclick="switchTab('tab-eq')">
         10-Bant Parametrik EQ
       </button>
-
-      <button type="button" class="nav-tab-btn" data-tab="tab-hardware" onclick="switchTab('tab-hardware')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
+      <button type="button" class="tab-btn" data-tab="tab-hardware" onclick="switchTab('tab-hardware')">
         Donanım Kontrolleri
       </button>
-
-      <button type="button" class="nav-tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
+      <button type="button" class="tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')">
         Canlı Telemetri
       </button>
     </nav>
 
-    <!-- Right Status Badges -->
-    <div class="header-status">
-      <!-- 2.4G RF -->
-      <div class="status-chip">
-        <span class="status-dot" id="dot-rf"></span>
+    <!-- Status Badges -->
+    <div class="header-actions">
+      <div class="chip">
+        <span class="chip-dot" id="dot-rf"></span>
         <span id="txt-rf">RF Bekleniyor</span>
       </div>
 
-      <!-- Battery -->
-      <div class="status-chip" id="chip-battery">
+      <div class="chip">
         <span id="txt-battery">Pil: --%</span>
       </div>
 
-      <!-- ChatMix -->
-      <div class="status-chip" title="ChatMix Oranı">
+      <div class="chip" title="ChatMix Oranı">
         <span>ChatMix:</span>
-        <div class="chatmix-bar-wrap">
-          <div class="chatmix-bar-fill game" id="bar-game" style="width: 50%;"></div>
-          <div class="chatmix-bar-fill chat" id="bar-chat" style="width: 50%;"></div>
-        </div>
-        <span id="txt-chatmix" style="font-weight:600;">100/100</span>
+        <span id="txt-chatmix" style="color:var(--text-main); font-weight:600;">100/100</span>
       </div>
 
-      <!-- Save Flash Button -->
-      <button type="button" class="btn-flash-top" onclick="triggerSaveFlash()" title="Ayarları kulaklığın kalıcı flaş hafızasına kaydet">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
+      <button type="button" class="btn-primary" onclick="triggerSaveFlash()" title="Ayarları kulaklık hafızasına yaz">
         Flaşa Kaydet
       </button>
     </div>
@@ -781,269 +697,267 @@ pre#raw-telemetry-json {
 </header>
 
 <!-- ── Main Workspace ── -->
-<main class="main-wrapper">
-  <!-- ═════════════════════════════════════════════════════ -->
-  <!-- TAB 1: 10-Band Parametric EQ Studio                  -->
-  <!-- ═════════════════════════════════════════════════════ -->
-  <section id="tab-eq" class="tab-pane active">
-    <!-- Channel Bar & Fast Presets -->
-    <div class="eq-top-toolbar">
-      <div class="channel-selector">
-        <button type="button" class="channel-btn active" data-channel="24g" onclick="switchChannel('24g')">
-          🎧 2.4G Kulaklık
+<main class="container">
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 1: 10-Band Parametric EQ Studio                -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="tab-eq" class="panel active">
+    <!-- Channel Bar -->
+    <div class="eq-toolbar">
+      <div class="channel-pills">
+        <button type="button" class="channel-pill-btn active" data-channel="24g" onclick="switchChannel('24g')">
+          2.4G Kulaklık
         </button>
-        <button type="button" class="channel-btn" data-channel="bt" onclick="switchChannel('bt')">
-          📱 Bluetooth
+        <button type="button" class="channel-pill-btn" data-channel="bt" onclick="switchChannel('bt')">
+          Bluetooth
         </button>
-        <button type="button" class="channel-btn" data-channel="mic" onclick="switchChannel('mic')">
-          🎙️ Mikrofon EQ
+        <button type="button" class="channel-pill-btn" data-channel="mic" onclick="switchChannel('mic')">
+          Mikrofon EQ
         </button>
       </div>
 
-      <div class="eq-toolbar-actions">
-        <button type="button" class="btn-studio" onclick="resetFlat()">Düzelt (Flat 0 dB)</button>
-        <button type="button" class="btn-studio" onclick="promptSavePreset()">Yeni Preset Kaydet</button>
+      <div class="eq-btn-group">
+        <button type="button" class="btn-secondary" onclick="resetFlat()">Sıfırla (Flat 0 dB)</button>
+        <button type="button" class="btn-secondary" onclick="promptSavePreset()">Preset Kaydet</button>
       </div>
     </div>
 
-    <!-- Preset Chips Row -->
-    <div class="preset-bar" id="preset-chips">
-      <!-- Generated via JS -->
-    </div>
+    <!-- Presets -->
+    <div class="presets-wrap" id="preset-chips"></div>
 
-    <!-- Sonar DSP Frequency Response Canvas -->
-    <div class="curve-card">
-      <div class="curve-card-header">
-        <span class="curve-title">DSP Frekans Yanıt Eğrisi</span>
-        <span class="curve-info" id="lbl-active-preset">Preset: flat</span>
+    <!-- DSP Canvas Curve -->
+    <div class="canvas-card">
+      <div class="canvas-card-header">
+        <span class="canvas-card-title">DSP Frekans Yanıtı</span>
+        <span class="canvas-card-preset" id="lbl-active-preset">Preset: flat</span>
       </div>
-      <div class="canvas-container">
+      <div class="canvas-box">
         <canvas id="eq-canvas"></canvas>
       </div>
     </div>
 
-    <!-- 10-Band Hardware Vertical Faders -->
-    <div class="faders-card">
-      <div class="faders-grid">
+    <!-- 10-Band Vertical Faders -->
+    <div class="faders-container">
+      <div class="faders-row">
         <!-- 31 Hz -->
         <div class="fader-cell" data-band="0">
-          <span class="fader-db-val" id="db-0">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-0" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-0">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-0" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(0, this.value)" onchange="onBandChange(0, this.value)" ondblclick="resetBand(0)" />
           </div>
-          <span class="fader-freq-lbl">31 Hz</span>
+          <span class="fader-label">31 Hz</span>
         </div>
         <!-- 62 Hz -->
         <div class="fader-cell" data-band="1">
-          <span class="fader-db-val" id="db-1">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-1" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-1">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-1" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(1, this.value)" onchange="onBandChange(1, this.value)" ondblclick="resetBand(1)" />
           </div>
-          <span class="fader-freq-lbl">62 Hz</span>
+          <span class="fader-label">62 Hz</span>
         </div>
         <!-- 125 Hz -->
         <div class="fader-cell" data-band="2">
-          <span class="fader-db-val" id="db-2">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-2" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-2">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-2" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(2, this.value)" onchange="onBandChange(2, this.value)" ondblclick="resetBand(2)" />
           </div>
-          <span class="fader-freq-lbl">125 Hz</span>
+          <span class="fader-label">125 Hz</span>
         </div>
         <!-- 250 Hz -->
         <div class="fader-cell" data-band="3">
-          <span class="fader-db-val" id="db-3">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-3" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-3">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-3" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(3, this.value)" onchange="onBandChange(3, this.value)" ondblclick="resetBand(3)" />
           </div>
-          <span class="fader-freq-lbl">250 Hz</span>
+          <span class="fader-label">250 Hz</span>
         </div>
         <!-- 500 Hz -->
         <div class="fader-cell" data-band="4">
-          <span class="fader-db-val" id="db-4">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-4" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-4">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-4" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(4, this.value)" onchange="onBandChange(4, this.value)" ondblclick="resetBand(4)" />
           </div>
-          <span class="fader-freq-lbl">500 Hz</span>
+          <span class="fader-label">500 Hz</span>
         </div>
         <!-- 1 kHz -->
         <div class="fader-cell" data-band="5">
-          <span class="fader-db-val" id="db-5">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-5" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-5">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-5" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(5, this.value)" onchange="onBandChange(5, this.value)" ondblclick="resetBand(5)" />
           </div>
-          <span class="fader-freq-lbl">1 kHz</span>
+          <span class="fader-label">1 kHz</span>
         </div>
         <!-- 2 kHz -->
         <div class="fader-cell" data-band="6">
-          <span class="fader-db-val" id="db-6">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-6" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-6">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-6" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(6, this.value)" onchange="onBandChange(6, this.value)" ondblclick="resetBand(6)" />
           </div>
-          <span class="fader-freq-lbl">2 kHz</span>
+          <span class="fader-label">2 kHz</span>
         </div>
         <!-- 4 kHz -->
         <div class="fader-cell" data-band="7">
-          <span class="fader-db-val" id="db-7">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-7" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-7">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-7" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(7, this.value)" onchange="onBandChange(7, this.value)" ondblclick="resetBand(7)" />
           </div>
-          <span class="fader-freq-lbl">4 kHz</span>
+          <span class="fader-label">4 kHz</span>
         </div>
         <!-- 8 kHz -->
         <div class="fader-cell" data-band="8">
-          <span class="fader-db-val" id="db-8">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-8" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-8">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-8" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(8, this.value)" onchange="onBandChange(8, this.value)" ondblclick="resetBand(8)" />
           </div>
-          <span class="fader-freq-lbl">8 kHz</span>
+          <span class="fader-label">8 kHz</span>
         </div>
         <!-- 16 kHz -->
         <div class="fader-cell" data-band="9">
-          <span class="fader-db-val" id="db-9">+0.0</span>
-          <div class="fader-track-box">
-            <input type="range" class="v-fader" id="band-9" min="-12" max="12" step="0.5" value="0"
+          <span class="fader-value" id="db-9">+0.0</span>
+          <div class="fader-track">
+            <input type="range" class="v-slider" id="band-9" min="-12" max="12" step="0.5" value="0"
               oninput="onBandInput(9, this.value)" onchange="onBandChange(9, this.value)" ondblclick="resetBand(9)" />
           </div>
-          <span class="fader-freq-lbl">16 kHz</span>
+          <span class="fader-label">16 kHz</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ═════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════ -->
   <!-- TAB 2: Hardware Controls                             -->
-  <!-- ═════════════════════════════════════════════════════ -->
-  <section id="tab-hardware" class="tab-pane">
-    <div class="hw-controls-grid">
-      <!-- Mic Gain (Strictly 0..=7 for Nova 7) -->
-      <div class="hw-box">
-        <div class="hw-box-head">
-          <div class="hw-box-title">Mikrofon Kazancı (ClearCast Gain)</div>
-          <div class="hw-box-desc">Dahili donanımsal ADC mikrofon ön-yükseltici seviyesi (0 - 7)</div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="tab-hardware" class="panel">
+    <div class="controls-grid">
+      <!-- Mic Gain (0..=7) -->
+      <div class="card">
+        <div>
+          <div class="card-title">Mikrofon Kazancı (ClearCast Gain)</div>
+          <div class="card-desc">Dahili ADC ön-yükseltici seviyesi (0 - 7)</div>
         </div>
-        <div class="hw-slider-row">
+        <div class="slider-control-box">
           <input type="range" class="h-slider" id="rng-mic-gain" min="0" max="7" value="7" step="1"
             oninput="onMicGainInput(this.value)" onchange="patchMicGain(this.value)" />
-          <span class="hw-slider-num" id="lbl-mic-gain">7 / 7</span>
+          <span class="slider-val-txt" id="lbl-mic-gain">7 / 7</span>
         </div>
       </div>
 
-      <!-- Sidetone (Yan Ton) -->
-      <div class="hw-box">
-        <div class="hw-box-head">
-          <div class="hw-box-title">Yan Ton (Sidetone)</div>
-          <div class="hw-box-desc">Kendi sesinizi kulaklık hoparlöründe gecikmesiz duyma seviyesi</div>
+      <!-- Sidetone -->
+      <div class="card">
+        <div>
+          <div class="card-title">Yan Ton (Sidetone)</div>
+          <div class="card-desc">Kendi sesinizi kulaklıkta gecikmesiz duyma seviyesi</div>
         </div>
-        <div class="hw-btn-group" id="seg-sidetone">
-          <button type="button" class="hw-segment-btn active" onclick="patchSidetone(0)">Kapalı</button>
-          <button type="button" class="hw-segment-btn" onclick="patchSidetone(1)">Düşük</button>
-          <button type="button" class="hw-segment-btn" onclick="patchSidetone(2)">Orta</button>
-          <button type="button" class="hw-segment-btn" onclick="patchSidetone(3)">Yüksek</button>
+        <div class="segment-box" id="seg-sidetone">
+          <button type="button" class="seg-item-btn active" onclick="patchSidetone(0)">Kapalı</button>
+          <button type="button" class="seg-item-btn" onclick="patchSidetone(1)">Düşük</button>
+          <button type="button" class="seg-item-btn" onclick="patchSidetone(2)">Orta</button>
+          <button type="button" class="seg-item-btn" onclick="patchSidetone(3)">Yüksek</button>
         </div>
       </div>
 
       <!-- Mute LED -->
-      <div class="hw-box">
-        <div class="hw-box-head">
-          <div class="hw-box-title">Sessiz LED Parlaklığı</div>
-          <div class="hw-box-desc">Mikrofon susturulduğunda uçtaki kırmızı LED şiddeti</div>
+      <div class="card">
+        <div>
+          <div class="card-title">Sessiz LED Parlaklığı</div>
+          <div class="card-desc">Mikrofon susturulduğundaki kırmızı LED şiddeti</div>
         </div>
-        <div class="hw-btn-group" id="seg-mute-led">
-          <button type="button" class="hw-segment-btn" onclick="patchMicLed(0)">Kapalı</button>
-          <button type="button" class="hw-segment-btn active" onclick="patchMicLed(1)">Orta</button>
-          <button type="button" class="hw-segment-btn" onclick="patchMicLed(2)">Yüksek</button>
+        <div class="segment-box" id="seg-mute-led">
+          <button type="button" class="seg-item-btn" onclick="patchMicLed(0)">Kapalı</button>
+          <button type="button" class="seg-item-btn active" onclick="patchMicLed(1)">Orta</button>
+          <button type="button" class="seg-item-btn" onclick="patchMicLed(2)">Yüksek</button>
         </div>
       </div>
 
-      <!-- Inactivity Sleep Timer -->
-      <div class="hw-box">
-        <div class="hw-box-head">
-          <div class="hw-box-title">Otomatik Uyku Zamanlayıcısı</div>
-          <div class="hw-box-desc">Ses sinyali kesildikten sonra kulaklığın otomatik kapanma süresi</div>
+      <!-- Inactivity Auto-Off -->
+      <div class="card">
+        <div>
+          <div class="card-title">Otomatik Uyku Zamanlayıcısı</div>
+          <div class="card-desc">Ses kesildikten sonra kulaklığın kapanma süresi</div>
         </div>
-        <div class="hw-btn-group" id="seg-auto-off">
-          <button type="button" class="hw-segment-btn" onclick="patchAutoOffMinutes(5)">5 dk</button>
-          <button type="button" class="hw-segment-btn" onclick="patchAutoOffMinutes(15)">15 dk</button>
-          <button type="button" class="hw-segment-btn active" onclick="patchAutoOffMinutes(30)">30 dk</button>
-          <button type="button" class="hw-segment-btn" onclick="patchAutoOffMinutes(0)">Kapalı</button>
+        <div class="segment-box" id="seg-auto-off">
+          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(5)">5 dk</button>
+          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(15)">15 dk</button>
+          <button type="button" class="seg-item-btn active" onclick="patchAutoOffMinutes(30)">30 dk</button>
+          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(0)">Kapalı</button>
         </div>
       </div>
     </div>
 
-    <!-- Toggle Switches Row -->
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
+    <!-- Toggle Switches -->
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem;">
       <div class="toggle-card">
         <div>
-          <div class="hw-box-title">Ses Seviyesi Sınırlayıcı (EU 85 dB)</div>
-          <div class="hw-box-desc">İşitme sağlığını korumak amacıyla donanımsal ses çıkış tavanı</div>
+          <div class="card-title">Ses Seviyesi Sınırlayıcı (EU 85 dB)</div>
+          <div class="card-desc">İşitme sağlığını korumak amacıyla donanımsal ses çıkış tavanı</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="chk-volume-limiter" onchange="patchVolumeLimiter(this.checked)" checked />
-          <span class="switch-slider"></span>
+          <span class="switch-knob"></span>
         </label>
       </div>
 
       <div class="toggle-card">
         <div>
-          <div class="hw-box-title">Bluetooth Otomatik Başlatma</div>
-          <div class="hw-box-desc">Kulaklık 2.4GHz ile açıldığında Bluetooth modülünü de eşzamanlı aç</div>
+          <div class="card-title">Bluetooth Otomatik Başlatma</div>
+          <div class="card-desc">Kulaklık açıldığında Bluetooth modülünü otomatik başlat</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="chk-bt-power" onchange="patchBtPowerDefault(this.checked)" checked />
-          <span class="switch-slider"></span>
+          <span class="switch-knob"></span>
         </label>
       </div>
 
-      <div class="hw-box">
-        <div class="hw-box-head">
-          <div class="hw-box-title">Bluetooth Çağrı Esnasında Oyun Ses Davranışı</div>
-          <div class="hw-box-desc">Telefon çağrısı aktifken PC / 2.4G oyun sesine uygulanacak işlem</div>
+      <div class="card">
+        <div>
+          <div class="card-title">Bluetooth Çağrı Esnasında Oyun Ses Davranışı</div>
+          <div class="card-desc">Telefon çağrısı geldiğinde 2.4GHz oyun sesine uygulanacak işlem</div>
         </div>
-        <div class="hw-btn-group" id="seg-bt-call">
-          <button type="button" class="hw-segment-btn" onclick="patchBtCallBehavior('do_nothing')">Değiştirme (0 dB)</button>
-          <button type="button" class="hw-segment-btn active" onclick="patchBtCallBehavior('attenuate_12db')">12 dB Kıs (Attenuate)</button>
-          <button type="button" class="hw-segment-btn" onclick="patchBtCallBehavior('mute_game')">Oyunu Sustur (Mute)</button>
+        <div class="segment-box" id="seg-bt-call">
+          <button type="button" class="seg-item-btn" onclick="patchBtCallBehavior('do_nothing')">Değiştirme (0 dB)</button>
+          <button type="button" class="seg-item-btn active" onclick="patchBtCallBehavior('attenuate_12db')">12 dB Kıs (Attenuate)</button>
+          <button type="button" class="seg-item-btn" onclick="patchBtCallBehavior('mute_game')">Oyunu Sustur (Mute)</button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ═════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════ -->
   <!-- TAB 3: Telemetry & Diagnostics                       -->
-  <!-- ═════════════════════════════════════════════════════ -->
-  <section id="tab-telemetry" class="tab-pane">
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="tab-telemetry" class="panel">
     <div class="telemetry-row">
-      <div class="telem-card">
-        <div class="telem-label">Pil Seviyesi</div>
-        <div class="telem-value" id="diag-battery">-- %</div>
+      <div class="telem-box">
+        <div class="telem-box-lbl">Pil Seviyesi</div>
+        <div class="telem-box-val" id="diag-battery">-- %</div>
       </div>
-      <div class="telem-card">
-        <div class="telem-label">Şarj Durumu</div>
-        <div class="telem-value" id="diag-charging">--</div>
+      <div class="telem-box">
+        <div class="telem-box-lbl">Şarj Durumu</div>
+        <div class="telem-box-val" id="diag-charging">--</div>
       </div>
-      <div class="telem-card">
-        <div class="telem-label">2.4G RF Durumu</div>
-        <div class="telem-value" id="diag-wireless">--</div>
+      <div class="telem-box">
+        <div class="telem-box-lbl">2.4G RF Durumu</div>
+        <div class="telem-box-val" id="diag-wireless">--</div>
       </div>
-      <div class="telem-card">
-        <div class="telem-label">Mikrofon Durumu</div>
-        <div class="telem-value" id="diag-mic">--</div>
+      <div class="telem-box">
+        <div class="telem-box-lbl">Mikrofon Durumu</div>
+        <div class="telem-box-val" id="diag-mic">--</div>
       </div>
     </div>
 
-    <div class="json-view-card">
-      <div class="json-view-header">
+    <div class="raw-box">
+      <div class="raw-box-header">
         <span style="font-weight:600;">Ham Telemetri JSON Verisi</span>
-        <button type="button" class="btn-studio" onclick="copyRawJson()">JSON Panoya Kopyala</button>
+        <button type="button" class="btn-secondary" onclick="copyRawJson()">Panoya Kopyala</button>
       </div>
       <pre id="raw-telemetry-json">{}</pre>
       <div style="font-size:0.8rem; color:var(--text-muted); font-family:var(--font-mono);">
@@ -1053,9 +967,7 @@ pre#raw-telemetry-json {
   </section>
 </main>
 
-<!-- Toast Notification -->
-<div class="toast" id="toast">
-  <span class="toast-dot"></span>
+<div class="toast-notice" id="toast">
   <span id="toast-msg">İşlem tamamlandı</span>
 </div>
 
@@ -1082,7 +994,6 @@ pre#raw-telemetry-json {
     auto_off_options: [5, 15, 30, 0]
   };
 
-  // ── Toast Helper ──
   let toastTimer = null;
   window.showToast = function(msg) {
     const el = document.getElementById('toast');
@@ -1092,27 +1003,25 @@ pre#raw-telemetry-json {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       el.classList.remove('show');
-    }, 2500);
+    }, 2400);
   };
 
-  // ── Tab Switching ──
   window.switchTab = function(tabId) {
-    document.querySelectorAll('.nav-tab-btn').forEach(b => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
     });
-    document.querySelectorAll('.tab-pane').forEach(p => {
+    document.querySelectorAll('.panel').forEach(p => {
       p.classList.toggle('active', p.id === tabId);
     });
 
     if (tabId === 'tab-eq') {
-      setTimeout(resizeAndDrawCurve, 30);
+      setTimeout(resizeAndDrawCurve, 20);
     }
   };
 
-  // ── EQ Channel Switching ──
   window.switchChannel = function(ch) {
     activeChannel = ch;
-    document.querySelectorAll('.channel-btn').forEach(b => {
+    document.querySelectorAll('.channel-pill-btn').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-channel') === ch);
     });
     loadChannelSliders();
@@ -1133,7 +1042,6 @@ pre#raw-telemetry-json {
     if (lbl) lbl.textContent = 'Preset: ' + channelData[activeChannel].activePreset;
   }
 
-  // ── Band Slider Inputs ──
   window.onBandInput = function(bandIdx, val) {
     const num = parseFloat(val);
     channelData[activeChannel].gains[bandIdx] = num;
@@ -1180,25 +1088,24 @@ pre#raw-telemetry-json {
     }).catch(e => showToast('EQ hatası: ' + e.message));
   }
 
-  // ── Preset Chips ──
   function initPresetChips() {
     const container = document.getElementById('preset-chips');
     container.innerHTML = '';
     PRESET_NAMES.forEach(name => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'preset-chip';
-      chip.setAttribute('data-preset', name);
-      chip.textContent = name.replace('_', ' ').toUpperCase();
-      chip.onclick = () => selectPreset(name);
-      container.appendChild(chip);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'preset-btn';
+      btn.setAttribute('data-preset', name);
+      btn.textContent = name.replace('_', ' ').toUpperCase();
+      btn.onclick = () => selectPreset(name);
+      container.appendChild(btn);
     });
     updatePresetChips();
   }
 
   function updatePresetChips() {
     const cur = channelData[activeChannel].activePreset;
-    document.querySelectorAll('#preset-chips .preset-chip').forEach(c => {
+    document.querySelectorAll('#preset-chips .preset-btn').forEach(c => {
       c.classList.toggle('active', c.getAttribute('data-preset') === cur);
     });
     const lbl = document.getElementById('lbl-active-preset');
@@ -1224,7 +1131,7 @@ pre#raw-telemetry-json {
   };
 
   window.promptSavePreset = function() {
-    const name = prompt("Yeni EQ profili için bir isim girin:", "Custom_Profile");
+    const name = prompt("Yeni EQ profili adı girin:", "Oyun_Profili");
     if (!name) return;
     fetch('/api/presets', {
       method: 'POST',
@@ -1235,11 +1142,11 @@ pre#raw-telemetry-json {
         gains_db: channelData[activeChannel].gains
       })
     }).then(r => r.json()).then(d => {
-      showToast('Yeni EQ profili kaydedildi: ' + name);
-    }).catch(e => showToast('Kaydetme hatası: ' + e.message));
+      showToast('Yeni profil kaydedildi: ' + name);
+    }).catch(e => showToast('Hata: ' + e.message));
   };
 
-  // ── Responsive Sonar Curve Canvas (Clean, Matte & No Neon) ──
+  // ── Clean Minimalist Canvas Curve ──
   function resizeAndDrawCurve() {
     const canvas = document.getElementById('eq-canvas');
     if (!canvas) return;
@@ -1261,7 +1168,7 @@ pre#raw-telemetry-json {
     ctx.clearRect(0, 0, width, height);
 
     const padLeft = 45;
-    const padRight = 20;
+    const padRight = 25;
     const padTop = 15;
     const padBottom = 25;
     const graphW = width - padLeft - padRight;
@@ -1269,7 +1176,7 @@ pre#raw-telemetry-json {
 
     if (graphW <= 0 || graphH <= 0) return;
 
-    // Grid dB Horizontal Lines (+12, +6, 0, -6, -12)
+    // Horizontal grid lines
     ctx.lineWidth = 1;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -1278,13 +1185,13 @@ pre#raw-telemetry-json {
     const dbSteps = [12, 6, 0, -6, -12];
     dbSteps.forEach(db => {
       const y = padTop + (12 - db) / 24 * graphH;
-      ctx.strokeStyle = db === 0 ? 'rgba(229, 80, 0, 0.4)' : 'rgba(255, 255, 255, 0.06)';
+      ctx.strokeStyle = db === 0 ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.04)';
       ctx.beginPath();
       ctx.moveTo(padLeft, y);
       ctx.lineTo(width - padRight, y);
       ctx.stroke();
 
-      ctx.fillStyle = db === 0 ? '#e55000' : 'rgba(255, 255, 255, 0.4)';
+      ctx.fillStyle = db === 0 ? '#e0e0e6' : 'rgba(255, 255, 255, 0.35)';
       ctx.fillText((db > 0 ? '+' : '') + db + 'dB', padLeft - 6, y);
     });
 
@@ -1298,13 +1205,13 @@ pre#raw-telemetry-json {
       const y = padTop + (12 - gain) / 24 * graphH;
       points.push({ x, y });
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
       ctx.beginPath();
       ctx.moveTo(x, padTop);
       ctx.lineTo(x, height - padBottom);
       ctx.stroke();
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       const label = FREQS[i] >= 1000 ? (FREQS[i] / 1000) + 'k' : String(FREQS[i]);
@@ -1312,11 +1219,11 @@ pre#raw-telemetry-json {
     }
 
     if (points.length > 0) {
-      // Clean Soft Degradé Fill
+      // Very subtle, elegant gradient fill
       const fillGrad = ctx.createLinearGradient(0, padTop, 0, padTop + graphH);
-      fillGrad.addColorStop(0, 'rgba(229, 80, 0, 0.22)');
-      fillGrad.addColorStop(0.5, 'rgba(229, 80, 0, 0.05)');
-      fillGrad.addColorStop(1, 'rgba(229, 80, 0, 0.0)');
+      fillGrad.addColorStop(0, 'rgba(255, 82, 0, 0.14)');
+      fillGrad.addColorStop(0.5, 'rgba(255, 82, 0, 0.03)');
+      fillGrad.addColorStop(1, 'rgba(255, 82, 0, 0.0)');
 
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
@@ -1332,7 +1239,7 @@ pre#raw-telemetry-json {
       ctx.fillStyle = fillGrad;
       ctx.fill();
 
-      // Clean Solid Stroke Line (No blurred neon)
+      // Sharp, non-glowing solid orange line
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 0; i < points.length - 1; i++) {
@@ -1341,26 +1248,21 @@ pre#raw-telemetry-json {
         ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
       }
       ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-      ctx.strokeStyle = '#e55000';
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#ff5200';
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Nodes
+      // Simple dots
       points.forEach(pt => {
-        ctx.fillStyle = '#e55000';
+        ctx.fillStyle = '#ff5200';
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#141418';
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 1.5, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
         ctx.fill();
       });
     }
   }
 
-  // ── Hardware Capabilities & Controls ──
+  // ── Hardware Controls ──
   function applyDeviceCapabilities(caps) {
     if (!caps || typeof caps !== 'object') return;
     currentCaps = Object.assign(currentCaps, caps);
@@ -1395,12 +1297,12 @@ pre#raw-telemetry-json {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mic_gain: Number(val) })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Mikrofon kazancı ayarlandı: ' + val + ' / ' + max);
+      if (d.ok) showToast('Mikrofon kazancı: ' + val + ' / ' + max);
     }).catch(e => showToast('Hata: ' + e.message));
   };
 
   window.patchSidetone = function(level) {
-    document.querySelectorAll('#seg-sidetone .hw-segment-btn').forEach((b, i) => {
+    document.querySelectorAll('#seg-sidetone .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', i === level);
     });
     fetch('/api/settings', {
@@ -1413,7 +1315,7 @@ pre#raw-telemetry-json {
   };
 
   window.patchMicLed = function(level) {
-    document.querySelectorAll('#seg-mute-led .hw-segment-btn').forEach((b, i) => {
+    document.querySelectorAll('#seg-mute-led .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', i === level);
     });
     fetch('/api/settings', {
@@ -1431,13 +1333,13 @@ pre#raw-telemetry-json {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ volume_limiter: enabled })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Ses sınırlayıcı (85 dB): ' + (enabled ? 'Aktif' : 'Kapalı'));
+      if (d.ok) showToast('Ses sınırlayıcı (85 dB): ' + (enabled ? 'Açık' : 'Kapalı'));
     }).catch(e => showToast('Hata: ' + e.message));
   };
 
   window.patchAutoOffMinutes = function(mins) {
     const validMinutes = [5, 15, 30, 0];
-    document.querySelectorAll('#seg-auto-off .hw-segment-btn').forEach((b, i) => {
+    document.querySelectorAll('#seg-auto-off .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', validMinutes[i] === mins);
     });
     fetch('/api/settings', {
@@ -1455,13 +1357,13 @@ pre#raw-telemetry-json {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bt_power_on_default: enabled, bt_auto_power_on: enabled })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Bluetooth otomatik açılma: ' + (enabled ? 'Aktif' : 'Kapalı'));
+      if (d.ok) showToast('Bluetooth otomatik açılma: ' + (enabled ? 'Açık' : 'Kapalı'));
     }).catch(e => showToast('Hata: ' + e.message));
   };
 
   window.patchBtCallBehavior = function(behavior) {
     const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
-    document.querySelectorAll('#seg-bt-call .hw-segment-btn').forEach((b, i) => {
+    document.querySelectorAll('#seg-bt-call .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', list[i] === behavior);
     });
     fetch('/api/settings', {
@@ -1477,19 +1379,19 @@ pre#raw-telemetry-json {
     fetch('/api/save-flash', { method: 'POST' })
       .then(r => r.json())
       .then(d => {
-        showToast('Kulaklık kalıcı flaş hafızasına kaydedildi (0x09)');
+        showToast('Ayarlar kulaklık kalıcı hafızasına yazıldı (0x09)');
       })
-      .catch(e => showToast('Flaş kaydetme hatası: ' + e.message));
+      .catch(e => showToast('Hata: ' + e.message));
   };
 
   window.copyRawJson = function() {
     const text = document.getElementById('raw-telemetry-json').textContent;
     navigator.clipboard.writeText(text).then(() => {
-      showToast('Telemetri JSON panoya kopyalandı');
+      showToast('JSON panoya kopyalandı');
     });
   };
 
-  // ── Telemetry & Status Sync ──
+  // ── Telemetry & Status ──
   function applyStatus(st) {
     if (!st || typeof st !== 'object') return;
 
@@ -1497,14 +1399,14 @@ pre#raw-telemetry-json {
       applyDeviceCapabilities(st.capabilities);
     }
 
-    // 2.4G RF Indicator
+    // 2.4G RF
     const dotRf = document.getElementById('dot-rf');
     const txtRf = document.getElementById('txt-rf');
     if (st.usb_connected) {
-      dotRf.className = 'status-dot connected';
+      dotRf.className = 'chip-dot connected';
       txtRf.textContent = 'RF Bağlı (' + (st.product_id || '0x1038') + ')';
     } else {
-      dotRf.className = 'status-dot warning';
+      dotRf.className = 'chip-dot warning';
       txtRf.textContent = 'RF Bekleniyor';
     }
 
@@ -1513,21 +1415,19 @@ pre#raw-telemetry-json {
     const isCharging = st.charging_state === 'charging';
     if (typeof st.battery_percent === 'number') {
       txtBat.textContent = (isCharging ? '⚡ Şarj: %' : 'Pil: %') + st.battery_percent;
-      txtBat.style.color = st.battery_percent <= 15 ? 'var(--status-amber)' : (isCharging ? 'var(--status-green)' : 'var(--text-primary)');
+      txtBat.style.color = st.battery_percent <= 15 ? 'var(--status-amber)' : (isCharging ? 'var(--status-green)' : 'var(--text-main)');
     } else {
       txtBat.textContent = 'Pil: --%';
     }
 
-    // ChatMix Meter
+    // ChatMix
     if (st.chatmix) {
       const g = st.chatmix.game || 0;
       const c = st.chatmix.chat || 0;
-      document.getElementById('bar-game').style.width = g + '%';
-      document.getElementById('bar-chat').style.width = c + '%';
       document.getElementById('txt-chatmix').textContent = `${g}/${c}`;
     }
 
-    // Controls Two-Way Sync
+    // Two-Way Settings Sync
     const s = st.settings || {};
     const t = st.telemetry || {};
 
@@ -1535,10 +1435,10 @@ pre#raw-telemetry-json {
     const sidetoneVal = (typeof t.sidetone_level === 'number') ? t.sidetone_level : s.sidetone_level;
     if (typeof sidetoneVal === 'number') {
       const eff = (s.sidetone_enabled !== false && sidetoneVal > 0) ? sidetoneVal : (t.sidetone_level || 0);
-      document.querySelectorAll('#seg-sidetone .hw-segment-btn').forEach((b, i) => b.classList.toggle('active', i === eff));
+      document.querySelectorAll('#seg-sidetone .seg-item-btn').forEach((b, i) => b.classList.toggle('active', i === eff));
     }
 
-    // Mic Gain (Strictly bounded by hardware caps: 0..=7)
+    // Mic Gain
     const micGainVal = (typeof t.mic_gain === 'number') ? t.mic_gain : s.mic_gain;
     if (typeof micGainVal === 'number') {
       const max = currentCaps.mic_gain_max || 7;
@@ -1552,10 +1452,10 @@ pre#raw-telemetry-json {
       if (lbl) lbl.textContent = clamped + ' / ' + max;
     }
 
-    // Mute LED Brightness
+    // Mute LED
     const muteLedVal = (typeof t.mute_led_brightness === 'number') ? t.mute_led_brightness : (s.mute_led_brightness ?? s.mic_mute_led);
     if (typeof muteLedVal === 'number') {
-      document.querySelectorAll('#seg-mute-led .hw-segment-btn').forEach((b, i) => b.classList.toggle('active', i === muteLedVal));
+      document.querySelectorAll('#seg-mute-led .seg-item-btn').forEach((b, i) => b.classList.toggle('active', i === muteLedVal));
     }
 
     // Volume Limiter
@@ -1569,7 +1469,7 @@ pre#raw-telemetry-json {
     const autoOffVal = (typeof t.inactivity_timer_mins === 'number') ? t.inactivity_timer_mins : (s.inactivity_timer_mins ?? s.auto_off_minutes);
     if (typeof autoOffVal === 'number') {
       const validMinutes = [5, 15, 30, 0];
-      document.querySelectorAll('#seg-auto-off .hw-segment-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === autoOffVal));
+      document.querySelectorAll('#seg-auto-off .seg-item-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === autoOffVal));
     }
 
     // BT Auto Power
@@ -1583,10 +1483,10 @@ pre#raw-telemetry-json {
     const btCallVal = t.bt_call_behavior || s.bt_call_behavior || s.bt_call_attenuation;
     if (btCallVal) {
       const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
-      document.querySelectorAll('#seg-bt-call .hw-segment-btn').forEach((b, i) => b.classList.toggle('active', list[i] === btCallVal));
+      document.querySelectorAll('#seg-bt-call .seg-item-btn').forEach((b, i) => b.classList.toggle('active', list[i] === btCallVal));
     }
 
-    // Active EQ Profile Sync
+    // Active EQ Profile
     if (st.active_profile_24g) channelData['24g'].activePreset = st.active_profile_24g;
     else if (st.active_profile) channelData['24g'].activePreset = st.active_profile;
     if (st.active_profile_bt) channelData['bt'].activePreset = st.active_profile_bt;
@@ -1601,7 +1501,7 @@ pre#raw-telemetry-json {
     updatePresetChips();
 
     // Diagnostics Tab
-    document.getElementById('diag-battery').textContent = (typeof st.battery_percent === 'number') ? `${st.battery_percent}% (ham: ${st.battery_raw ?? '--'})` : 'N/A';
+    document.getElementById('diag-battery').textContent = (typeof st.battery_percent === 'number') ? `${st.battery_percent}%` : 'N/A';
     document.getElementById('diag-charging').textContent = st.charging_state || 'Standby';
     document.getElementById('diag-wireless').textContent = (st.wireless_state || 'disconnected').toUpperCase();
     document.getElementById('diag-mic').textContent = st.mic_muted === true ? 'Sessizde' : (st.mic_muted === false ? 'Açık' : 'Bilinmiyor');
@@ -1612,7 +1512,7 @@ pre#raw-telemetry-json {
     }
   }
 
-  // ── SSE Stream Connection ──
+  // ── SSE Stream ──
   function connectSse() {
     try {
       const es = new EventSource('/api/events');
@@ -1643,7 +1543,6 @@ pre#raw-telemetry-json {
 
   window.addEventListener('resize', resizeAndDrawCurve);
 
-  // ── Bootstrap ──
   async function init() {
     initPresetChips();
     loadChannelSliders();
@@ -1655,9 +1554,7 @@ pre#raw-telemetry-json {
         const data = await res.json();
         applyStatus(data);
       }
-    } catch(e) {
-      console.warn("Status fetch warning:", e);
-    }
+    } catch(e) {}
 
     connectSse();
     startPolling();
