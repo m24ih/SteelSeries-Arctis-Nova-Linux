@@ -207,6 +207,38 @@ html, body {
   background: var(--accent-hover);
 }
 
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lang-btn:hover {
+  color: var(--text-main);
+}
+
+.lang-btn.active {
+  background: var(--border-subtle);
+  color: var(--text-main);
+}
+
 /* ── Content Container ── */
 .container {
   max-width: 1100px;
@@ -662,18 +694,18 @@ pre#raw-telemetry-json {
 
     <!-- Minimalist Tabs -->
     <nav class="nav-tabs">
-      <button type="button" class="tab-btn active" data-tab="tab-eq" onclick="switchTab('tab-eq')">
+      <button type="button" class="tab-btn active" data-tab="tab-eq" onclick="switchTab('tab-eq')" data-i18n="tab_eq">
         10-Bant Parametrik EQ
       </button>
-      <button type="button" class="tab-btn" data-tab="tab-hardware" onclick="switchTab('tab-hardware')">
+      <button type="button" class="tab-btn" data-tab="tab-hardware" onclick="switchTab('tab-hardware')" data-i18n="tab_hw">
         Donanım Kontrolleri
       </button>
-      <button type="button" class="tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')">
+      <button type="button" class="tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')" data-i18n="tab_telem">
         Canlı Telemetri
       </button>
     </nav>
 
-    <!-- Status Badges -->
+    <!-- Status Badges & Controls -->
     <div class="header-actions">
       <div class="chip">
         <span class="chip-dot" id="dot-rf"></span>
@@ -684,13 +716,18 @@ pre#raw-telemetry-json {
         <span id="txt-battery">Pil: --%</span>
       </div>
 
-      <div class="chip" title="ChatMix Oranı">
+      <div class="chip" data-i18n-title="chatmix_title" title="ChatMix Oranı">
         <span>ChatMix:</span>
         <span id="txt-chatmix" style="color:var(--text-main); font-weight:600;">100/100</span>
       </div>
 
-      <button type="button" class="btn-primary" onclick="triggerSaveFlash()" title="Ayarları kulaklık hafızasına yaz">
-        Flaşa Kaydet
+      <div class="lang-toggle" title="Dil / Language">
+        <button type="button" class="lang-btn active" data-lang="tr" onclick="setLanguage('tr')">TR</button>
+        <button type="button" class="lang-btn" data-lang="en" onclick="setLanguage('en')">EN</button>
+      </div>
+
+      <button type="button" class="btn-primary" id="btn-save-headset" onclick="triggerSaveHeadset()" data-i18n="save_headset" data-i18n-title="save_headset_title" title="Ayarları kulaklık hafızasına yaz (0x09)">
+        Kulaklığa Kaydet
       </button>
     </div>
   </div>
@@ -705,20 +742,20 @@ pre#raw-telemetry-json {
     <!-- Channel Bar -->
     <div class="eq-toolbar">
       <div class="channel-pills">
-        <button type="button" class="channel-pill-btn active" data-channel="24g" onclick="switchChannel('24g')">
+        <button type="button" class="channel-pill-btn active" data-channel="24g" onclick="switchChannel('24g')" data-i18n="ch_24g">
           2.4G Kulaklık
         </button>
-        <button type="button" class="channel-pill-btn" data-channel="bt" onclick="switchChannel('bt')">
+        <button type="button" class="channel-pill-btn" data-channel="bt" onclick="switchChannel('bt')" data-i18n="ch_bt">
           Bluetooth
         </button>
-        <button type="button" class="channel-pill-btn" data-channel="mic" onclick="switchChannel('mic')">
+        <button type="button" class="channel-pill-btn" data-channel="mic" onclick="switchChannel('mic')" data-i18n="ch_mic">
           Mikrofon EQ
         </button>
       </div>
 
       <div class="eq-btn-group">
-        <button type="button" class="btn-secondary" onclick="resetFlat()">Sıfırla (Flat 0 dB)</button>
-        <button type="button" class="btn-secondary" onclick="promptSavePreset()">Preset Kaydet</button>
+        <button type="button" class="btn-secondary" onclick="resetFlat()" data-i18n="btn_reset_flat">Sıfırla (Flat 0 dB)</button>
+        <button type="button" class="btn-secondary" onclick="promptSavePreset()" data-i18n="btn_save_preset">Preset Kaydet</button>
       </div>
     </div>
 
@@ -728,7 +765,7 @@ pre#raw-telemetry-json {
     <!-- DSP Canvas Curve -->
     <div class="canvas-card">
       <div class="canvas-card-header">
-        <span class="canvas-card-title">DSP Frekans Yanıtı</span>
+        <span class="canvas-card-title" data-i18n="dsp_title">DSP Frekans Yanıtı</span>
         <span class="canvas-card-preset" id="lbl-active-preset">Preset: flat</span>
       </div>
       <div class="canvas-box">
@@ -841,8 +878,8 @@ pre#raw-telemetry-json {
       <!-- Mic Gain (0..=7) -->
       <div class="card">
         <div>
-          <div class="card-title">Mikrofon Kazancı (ClearCast Gain)</div>
-          <div class="card-desc">Dahili ADC ön-yükseltici seviyesi (0 - 7)</div>
+          <div class="card-title" data-i18n="mic_gain_title">Mikrofon Kazancı (ClearCast Gain)</div>
+          <div class="card-desc" data-i18n="mic_gain_desc">Dahili ADC ön-yükseltici seviyesi (0 - 7)</div>
         </div>
         <div class="slider-control-box">
           <input type="range" class="h-slider" id="rng-mic-gain" min="0" max="7" value="7" step="1"
@@ -854,41 +891,41 @@ pre#raw-telemetry-json {
       <!-- Sidetone -->
       <div class="card">
         <div>
-          <div class="card-title">Yan Ton (Sidetone)</div>
-          <div class="card-desc">Kendi sesinizi kulaklıkta gecikmesiz duyma seviyesi</div>
+          <div class="card-title" data-i18n="sidetone_title">Yan Ton (Sidetone)</div>
+          <div class="card-desc" data-i18n="sidetone_desc">Kendi sesinizi kulaklıkta gecikmesiz duyma seviyesi</div>
         </div>
         <div class="segment-box" id="seg-sidetone">
-          <button type="button" class="seg-item-btn active" onclick="patchSidetone(0)">Kapalı</button>
-          <button type="button" class="seg-item-btn" onclick="patchSidetone(1)">Düşük</button>
-          <button type="button" class="seg-item-btn" onclick="patchSidetone(2)">Orta</button>
-          <button type="button" class="seg-item-btn" onclick="patchSidetone(3)">Yüksek</button>
+          <button type="button" class="seg-item-btn active" data-seg-sidetone="0" onclick="patchSidetone(0)">Kapalı</button>
+          <button type="button" class="seg-item-btn" data-seg-sidetone="1" onclick="patchSidetone(1)">Düşük</button>
+          <button type="button" class="seg-item-btn" data-seg-sidetone="2" onclick="patchSidetone(2)">Orta</button>
+          <button type="button" class="seg-item-btn" data-seg-sidetone="3" onclick="patchSidetone(3)">Yüksek</button>
         </div>
       </div>
 
       <!-- Mute LED -->
       <div class="card">
         <div>
-          <div class="card-title">Sessiz LED Parlaklığı</div>
-          <div class="card-desc">Mikrofon susturulduğundaki kırmızı LED şiddeti</div>
+          <div class="card-title" data-i18n="mute_led_title">Sessiz LED Parlaklığı</div>
+          <div class="card-desc" data-i18n="mute_led_desc">Mikrofon susturulduğundaki kırmızı LED şiddeti</div>
         </div>
         <div class="segment-box" id="seg-mute-led">
-          <button type="button" class="seg-item-btn" onclick="patchMicLed(0)">Kapalı</button>
-          <button type="button" class="seg-item-btn active" onclick="patchMicLed(1)">Orta</button>
-          <button type="button" class="seg-item-btn" onclick="patchMicLed(2)">Yüksek</button>
+          <button type="button" class="seg-item-btn" data-seg-muteled="0" onclick="patchMicLed(0)">Kapalı</button>
+          <button type="button" class="seg-item-btn active" data-seg-muteled="1" onclick="patchMicLed(1)">Orta</button>
+          <button type="button" class="seg-item-btn" data-seg-muteled="2" onclick="patchMicLed(2)">Yüksek</button>
         </div>
       </div>
 
       <!-- Inactivity Auto-Off -->
       <div class="card">
         <div>
-          <div class="card-title">Otomatik Uyku Zamanlayıcısı</div>
-          <div class="card-desc">Ses kesildikten sonra kulaklığın kapanma süresi</div>
+          <div class="card-title" data-i18n="auto_off_title">Otomatik Uyku Zamanlayıcısı</div>
+          <div class="card-desc" data-i18n="auto_off_desc">Ses kesildikten sonra kulaklığın kapanma süresi</div>
         </div>
         <div class="segment-box" id="seg-auto-off">
-          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(5)">5 dk</button>
-          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(15)">15 dk</button>
-          <button type="button" class="seg-item-btn active" onclick="patchAutoOffMinutes(30)">30 dk</button>
-          <button type="button" class="seg-item-btn" onclick="patchAutoOffMinutes(0)">Kapalı</button>
+          <button type="button" class="seg-item-btn" data-seg-autooff="5" onclick="patchAutoOffMinutes(5)">5 dk</button>
+          <button type="button" class="seg-item-btn" data-seg-autooff="15" onclick="patchAutoOffMinutes(15)">15 dk</button>
+          <button type="button" class="seg-item-btn active" data-seg-autooff="30" onclick="patchAutoOffMinutes(30)">30 dk</button>
+          <button type="button" class="seg-item-btn" data-seg-autooff="0" onclick="patchAutoOffMinutes(0)">Kapalı</button>
         </div>
       </div>
     </div>
@@ -897,8 +934,8 @@ pre#raw-telemetry-json {
     <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem;">
       <div class="toggle-card">
         <div>
-          <div class="card-title">Ses Seviyesi Sınırlayıcı (EU 85 dB)</div>
-          <div class="card-desc">İşitme sağlığını korumak amacıyla donanımsal ses çıkış tavanı</div>
+          <div class="card-title" data-i18n="vol_limit_title">Ses Seviyesi Sınırlayıcı (EU 85 dB)</div>
+          <div class="card-desc" data-i18n="vol_limit_desc">İşitme sağlığını korumak amacıyla donanımsal ses çıkış tavanı</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="chk-volume-limiter" onchange="patchVolumeLimiter(this.checked)" checked />
@@ -908,8 +945,8 @@ pre#raw-telemetry-json {
 
       <div class="toggle-card">
         <div>
-          <div class="card-title">Bluetooth Otomatik Başlatma</div>
-          <div class="card-desc">Kulaklık açıldığında Bluetooth modülünü otomatik başlat</div>
+          <div class="card-title" data-i18n="bt_power_title">Bluetooth Otomatik Başlatma</div>
+          <div class="card-desc" data-i18n="bt_power_desc">Kulaklık açıldığında Bluetooth modülünü otomatik başlat</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="chk-bt-power" onchange="patchBtPowerDefault(this.checked)" checked />
@@ -919,13 +956,13 @@ pre#raw-telemetry-json {
 
       <div class="card">
         <div>
-          <div class="card-title">Bluetooth Çağrı Esnasında Oyun Ses Davranışı</div>
-          <div class="card-desc">Telefon çağrısı geldiğinde 2.4GHz oyun sesine uygulanacak işlem</div>
+          <div class="card-title" data-i18n="bt_call_title">Bluetooth Çağrı Esnasında Oyun Ses Davranışı</div>
+          <div class="card-desc" data-i18n="bt_call_desc">Telefon çağrısı geldiğinde 2.4GHz oyun sesine uygulanacak işlem</div>
         </div>
         <div class="segment-box" id="seg-bt-call">
-          <button type="button" class="seg-item-btn" onclick="patchBtCallBehavior('do_nothing')">Değiştirme (0 dB)</button>
-          <button type="button" class="seg-item-btn active" onclick="patchBtCallBehavior('attenuate_12db')">12 dB Kıs (Attenuate)</button>
-          <button type="button" class="seg-item-btn" onclick="patchBtCallBehavior('mute_game')">Oyunu Sustur (Mute)</button>
+          <button type="button" class="seg-item-btn" data-seg-btcall="do_nothing" onclick="patchBtCallBehavior('do_nothing')">Değiştirme (0 dB)</button>
+          <button type="button" class="seg-item-btn active" data-seg-btcall="attenuate_12db" onclick="patchBtCallBehavior('attenuate_12db')">12 dB Kıs (Attenuate)</button>
+          <button type="button" class="seg-item-btn" data-seg-btcall="mute_game" onclick="patchBtCallBehavior('mute_game')">Oyunu Sustur (Mute)</button>
         </div>
       </div>
     </div>
@@ -937,31 +974,31 @@ pre#raw-telemetry-json {
   <section id="tab-telemetry" class="panel">
     <div class="telemetry-row">
       <div class="telem-box">
-        <div class="telem-box-lbl">Pil Seviyesi</div>
+        <div class="telem-box-lbl" data-i18n="diag_battery">Pil Seviyesi</div>
         <div class="telem-box-val" id="diag-battery">-- %</div>
       </div>
       <div class="telem-box">
-        <div class="telem-box-lbl">Şarj Durumu</div>
+        <div class="telem-box-lbl" data-i18n="diag_charging">Şarj Durumu</div>
         <div class="telem-box-val" id="diag-charging">--</div>
       </div>
       <div class="telem-box">
-        <div class="telem-box-lbl">2.4G RF Durumu</div>
+        <div class="telem-box-lbl" data-i18n="diag_wireless">2.4G RF Durumu</div>
         <div class="telem-box-val" id="diag-wireless">--</div>
       </div>
       <div class="telem-box">
-        <div class="telem-box-lbl">Mikrofon Durumu</div>
+        <div class="telem-box-lbl" data-i18n="diag_mic">Mikrofon Durumu</div>
         <div class="telem-box-val" id="diag-mic">--</div>
       </div>
     </div>
 
     <div class="raw-box">
       <div class="raw-box-header">
-        <span style="font-weight:600;">Ham Telemetri JSON Verisi</span>
-        <button type="button" class="btn-secondary" onclick="copyRawJson()">Panoya Kopyala</button>
+        <span style="font-weight:600;" data-i18n="raw_json_title">Ham Telemetri JSON Verisi</span>
+        <button type="button" class="btn-secondary" onclick="copyRawJson()" data-i18n="btn_copy_json">Panoya Kopyala</button>
       </div>
       <pre id="raw-telemetry-json">{}</pre>
       <div style="font-size:0.8rem; color:var(--text-muted); font-family:var(--font-mono);">
-        Son senkronizasyon: <span id="txt-last-update">--:--:--</span>
+        <span data-i18n="last_sync">Son senkronizasyon: </span><span id="txt-last-update">--:--:--</span>
       </div>
     </div>
   </section>
@@ -974,6 +1011,234 @@ pre#raw-telemetry-json {
 <script>
 (function() {
   'use strict';
+
+  let currentLang = 'tr';
+  let lastStatusData = null;
+
+  const TRANSLATIONS = {
+    tr: {
+      app_subtitle: 'STEELSERIES ENGINE',
+      tab_eq: '10-Bant Parametrik EQ',
+      tab_hw: 'Donanım Kontrolleri',
+      tab_telem: 'Canlı Telemetri',
+      rf_waiting: 'RF Bekleniyor',
+      rf_connected: 'RF Bağlı',
+      battery_label: 'Pil: %',
+      battery_charging: '⚡ Şarj: %',
+      chatmix_title: 'ChatMix Oranı',
+      save_headset: 'Kulaklığa Kaydet',
+      save_headset_title: 'Ayarları kulaklık hafızasına yaz (0x09)',
+      save_headset_success: 'Ayarlar kulaklık kalıcı hafızasına yazıldı (0x09)',
+      save_headset_fail: 'Kulaklığa kaydetme başarısız: ',
+      ch_24g: '2.4G Kulaklık',
+      ch_bt: 'Bluetooth',
+      ch_mic: 'Mikrofon EQ',
+      btn_reset_flat: 'Sıfırla (Flat 0 dB)',
+      btn_save_preset: 'Preset Kaydet',
+      dsp_title: 'DSP Frekans Yanıtı',
+      dsp_preset_prefix: 'Preset: ',
+      mic_gain_title: 'Mikrofon Kazancı (ClearCast Gain)',
+      mic_gain_desc: 'Dahili ADC ön-yükseltici seviyesi (0 - 7)',
+      sidetone_title: 'Yan Ton (Sidetone)',
+      sidetone_desc: 'Kendi sesinizi kulaklıkta gecikmesiz duyma seviyesi',
+      mute_led_title: 'Sessiz LED Parlaklığı',
+      mute_led_desc: 'Mikrofon susturulduğundaki kırmızı LED şiddeti',
+      auto_off_title: 'Otomatik Uyku Zamanlayıcısı',
+      auto_off_desc: 'Ses kesildikten sonra kulaklığın kapanma süresi',
+      vol_limit_title: 'Ses Seviyesi Sınırlayıcı (EU 85 dB)',
+      vol_limit_desc: 'İşitme sağlığını korumak amacıyla donanımsal ses çıkış tavanı',
+      bt_power_title: 'Bluetooth Otomatik Başlatma',
+      bt_power_desc: 'Kulaklık açıldığında Bluetooth modülünü otomatik başlat',
+      bt_call_title: 'Bluetooth Çağrı Esnasında Oyun Ses Davranışı',
+      bt_call_desc: 'Telefon çağrısı geldiğinde 2.4GHz oyun sesine uygulanacak işlem',
+      diag_battery: 'Pil Seviyesi',
+      diag_charging: 'Şarj Durumu',
+      diag_wireless: '2.4G RF Durumu',
+      diag_mic: 'Mikrofon Durumu',
+      raw_json_title: 'Ham Telemetri JSON Verisi',
+      btn_copy_json: 'Panoya Kopyala',
+      last_sync: 'Son senkronizasyon: ',
+      off: 'Kapalı',
+      low: 'Düşük',
+      med: 'Orta',
+      high: 'Yüksek',
+      min_unit: ' dk',
+      bt_do_nothing: 'Değiştirme (0 dB)',
+      bt_attenuate: '12 dB Kıs (Attenuate)',
+      bt_mute: 'Oyunu Sustur (Mute)',
+      mic_state_active: 'Açık',
+      mic_state_muted: 'Sessizde',
+      mic_state_unknown: 'Bilinmiyor',
+      charging_state_charging: 'Şarj Oluyor',
+      charging_state_not_charging: 'Pilde',
+      prompt_preset_name: 'Yeni EQ profili adı girin:',
+      toast_preset_saved: 'Yeni profil kaydedildi: ',
+      toast_preset_applied: 'Preset uygulandı: ',
+      toast_preset_reset: 'Sıfırlandı (Flat 0 dB)',
+      toast_mic_gain: 'Mikrofon kazancı: ',
+      toast_sidetone: 'Yan Ton: ',
+      toast_mute_led: 'Sessiz LED: ',
+      toast_vol_limit: 'Ses sınırlayıcı (85 dB): ',
+      toast_auto_off: 'Otomatik kapanma: ',
+      toast_bt_power: 'Bluetooth otomatik açılma: ',
+      toast_bt_call: 'BT Çağrı davranışı güncellendi',
+      toast_json_copied: 'JSON panoya kopyalandı',
+      toast_lang_changed: 'Dil güncellendi: Türkçe',
+      state_enabled: 'Açık',
+      state_disabled: 'Kapalı'
+    },
+    en: {
+      app_subtitle: 'STEELSERIES ENGINE',
+      tab_eq: '10-Band Parametric EQ',
+      tab_hw: 'Hardware Controls',
+      tab_telem: 'Live Telemetry',
+      rf_waiting: 'Waiting for RF',
+      rf_connected: 'RF Connected',
+      battery_label: 'Battery: %',
+      battery_charging: '⚡ Charging: %',
+      chatmix_title: 'ChatMix Ratio',
+      save_headset: 'Save to Headset',
+      save_headset_title: 'Persist settings to headset onboard memory (0x09)',
+      save_headset_success: 'Settings saved to headset onboard memory (0x09)',
+      save_headset_fail: 'Failed to save to headset: ',
+      ch_24g: '2.4G Headset',
+      ch_bt: 'Bluetooth',
+      ch_mic: 'Microphone EQ',
+      btn_reset_flat: 'Reset (Flat 0 dB)',
+      btn_save_preset: 'Save Preset',
+      dsp_title: 'DSP Frequency Response',
+      dsp_preset_prefix: 'Preset: ',
+      mic_gain_title: 'Microphone Gain (ClearCast)',
+      mic_gain_desc: 'Internal ADC pre-amplifier level (0 - 7)',
+      sidetone_title: 'Sidetone',
+      sidetone_desc: 'Real-time zero-latency mic monitoring in headset',
+      mute_led_title: 'Mute LED Brightness',
+      mute_led_desc: 'Red LED brightness when mic is muted',
+      auto_off_title: 'Auto-Shutoff Inactivity Timer',
+      auto_off_desc: 'Headset sleep timeout when no audio is played',
+      vol_limit_title: 'Volume Limiter (EU 85 dB)',
+      vol_limit_desc: 'Hardware volume output ceiling to protect hearing health',
+      bt_power_title: 'Bluetooth Auto-Power On',
+      bt_power_desc: 'Automatically start Bluetooth when headset is powered on',
+      bt_call_title: 'Game Audio Behavior During Bluetooth Call',
+      bt_call_desc: 'Action applied to 2.4GHz game audio during phone calls',
+      diag_battery: 'Battery Level',
+      diag_charging: 'Charging State',
+      diag_wireless: '2.4G RF Status',
+      diag_mic: 'Microphone Status',
+      raw_json_title: 'Raw Telemetry JSON Data',
+      btn_copy_json: 'Copy to Clipboard',
+      last_sync: 'Last sync: ',
+      off: 'Off',
+      low: 'Low',
+      med: 'Medium',
+      high: 'High',
+      min_unit: ' min',
+      bt_do_nothing: 'Do Nothing (0 dB)',
+      bt_attenuate: 'Attenuate 12 dB',
+      bt_mute: 'Mute Game',
+      mic_state_active: 'Active',
+      mic_state_muted: 'Muted',
+      mic_state_unknown: 'Unknown',
+      charging_state_charging: 'Charging',
+      charging_state_not_charging: 'On Battery',
+      prompt_preset_name: 'Enter a name for the new EQ profile:',
+      toast_preset_saved: 'New profile saved: ',
+      toast_preset_applied: 'Preset applied: ',
+      toast_preset_reset: 'Reset to Flat (0 dB)',
+      toast_mic_gain: 'Microphone gain: ',
+      toast_sidetone: 'Sidetone: ',
+      toast_mute_led: 'Mute LED: ',
+      toast_vol_limit: 'Volume Limiter (85 dB): ',
+      toast_auto_off: 'Auto sleep: ',
+      toast_bt_power: 'Bluetooth auto-power: ',
+      toast_bt_call: 'BT Call behavior updated',
+      toast_json_copied: 'JSON copied to clipboard',
+      toast_lang_changed: 'Language updated: English',
+      state_enabled: 'On',
+      state_disabled: 'Off'
+    }
+  };
+
+  function updateSegmentLabels() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+
+    const stBtns = document.querySelectorAll('#seg-sidetone .seg-item-btn');
+    if (stBtns.length === 4) {
+      stBtns[0].textContent = dict.off;
+      stBtns[1].textContent = dict.low;
+      stBtns[2].textContent = dict.med;
+      stBtns[3].textContent = dict.high;
+    }
+
+    const mlBtns = document.querySelectorAll('#seg-mute-led .seg-item-btn');
+    if (mlBtns.length === 3) {
+      mlBtns[0].textContent = dict.off;
+      mlBtns[1].textContent = dict.med;
+      mlBtns[2].textContent = dict.high;
+    }
+
+    const aoBtns = document.querySelectorAll('#seg-auto-off .seg-item-btn');
+    if (aoBtns.length === 4) {
+      aoBtns[0].textContent = '5' + dict.min_unit;
+      aoBtns[1].textContent = '15' + dict.min_unit;
+      aoBtns[2].textContent = '30' + dict.min_unit;
+      aoBtns[3].textContent = dict.off;
+    }
+
+    const bcBtns = document.querySelectorAll('#seg-bt-call .seg-item-btn');
+    if (bcBtns.length === 3) {
+      bcBtns[0].textContent = dict.bt_do_nothing;
+      bcBtns[1].textContent = dict.bt_attenuate;
+      bcBtns[2].textContent = dict.bt_mute;
+    }
+  }
+
+  function updateChannelPillLabels() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+    document.querySelectorAll('.channel-pill-btn').forEach(btn => {
+      const ch = btn.getAttribute('data-channel');
+      if (ch === '24g') btn.textContent = dict.ch_24g;
+      else if (ch === 'bt') btn.textContent = dict.ch_bt;
+      else if (ch === 'mic') btn.textContent = dict.ch_mic;
+    });
+  }
+
+  window.setLanguage = function(lang, broadcast) {
+    if (broadcast === undefined) broadcast = true;
+    if (lang !== 'en') lang = 'tr';
+    currentLang = lang;
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+    });
+
+    const dict = TRANSLATIONS[lang] || TRANSLATIONS.tr;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (dict[key]) el.textContent = dict[key];
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      const key = el.getAttribute('data-i18n-title');
+      if (dict[key]) el.setAttribute('title', dict[key]);
+    });
+
+    updateSegmentLabels();
+    updateChannelPillLabels();
+    if (lastStatusData) {
+      applyStatus(lastStatusData);
+    }
+
+    if (broadcast) {
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang })
+      }).then(r => r.json()).then(d => {
+        if (d.ok) showToast(dict.toast_lang_changed);
+      }).catch(e => showToast((dict.save_headset_fail || 'Error: ') + e.message));
+    }
+  };
 
   let activeChannel = '24g';
   const FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
@@ -1066,13 +1331,14 @@ pre#raw-telemetry-json {
   };
 
   window.resetFlat = function() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     channelData[activeChannel].gains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     channelData[activeChannel].activePreset = 'flat';
     loadChannelSliders();
     drawEqCurve();
     updatePresetChips();
     applyCurrentEqGains();
-    showToast('EQ Düz (Flat 0 dB) olarak sıfırlandı');
+    showToast(dict.toast_preset_reset);
   };
 
   function applyCurrentEqGains() {
@@ -1084,8 +1350,11 @@ pre#raw-telemetry-json {
         gains_db: channelData[activeChannel].gains
       })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Donanım DSP EQ güncellendi');
-    }).catch(e => showToast('EQ hatası: ' + e.message));
+      if (d.ok) {
+        const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+        showToast(dict.toast_preset_applied + channelData[activeChannel].activePreset.toUpperCase());
+      }
+    }).catch(e => showToast('EQ error: ' + e.message));
   }
 
   function initPresetChips() {
@@ -1113,6 +1382,7 @@ pre#raw-telemetry-json {
   }
 
   window.selectPreset = function(presetName) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     channelData[activeChannel].activePreset = presetName;
     updatePresetChips();
 
@@ -1125,13 +1395,14 @@ pre#raw-telemetry-json {
         channelData[activeChannel].gains = d.gains_db;
         loadChannelSliders();
         drawEqCurve();
-        showToast('Preset uygulandı: ' + presetName.toUpperCase());
+        showToast(dict.toast_preset_applied + presetName.toUpperCase());
       }
-    }).catch(e => showToast('Preset hatası: ' + e.message));
+    }).catch(e => showToast('Preset error: ' + e.message));
   };
 
   window.promptSavePreset = function() {
-    const name = prompt("Yeni EQ profili adı girin:", "Oyun_Profili");
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+    const name = prompt(dict.prompt_preset_name, "Game_Profile");
     if (!name) return;
     fetch('/api/presets', {
       method: 'POST',
@@ -1142,8 +1413,8 @@ pre#raw-telemetry-json {
         gains_db: channelData[activeChannel].gains
       })
     }).then(r => r.json()).then(d => {
-      showToast('Yeni profil kaydedildi: ' + name);
-    }).catch(e => showToast('Hata: ' + e.message));
+      showToast(dict.toast_preset_saved + name);
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   // ── Clean Minimalist Canvas Curve ──
@@ -1291,53 +1562,60 @@ pre#raw-telemetry-json {
   };
 
   window.patchMicGain = function(val) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     const max = currentCaps.mic_gain_max || 7;
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mic_gain: Number(val) })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Mikrofon kazancı: ' + val + ' / ' + max);
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_mic_gain + val + ' / ' + max);
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchSidetone = function(level) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     document.querySelectorAll('#seg-sidetone .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', i === level);
     });
+    const levelNames = [dict.off, dict.low, dict.med, dict.high];
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sidetone_level: level, sidetone_enabled: level > 0 })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Yan Ton: ' + ['Kapalı', 'Düşük', 'Orta', 'Yüksek'][level]);
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_sidetone + (levelNames[level] || level));
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchMicLed = function(level) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     document.querySelectorAll('#seg-mute-led .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', i === level);
     });
+    const levelNames = [dict.off, dict.med, dict.high];
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mute_led_brightness: level, mic_mute_led: level })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Sessiz LED: ' + ['Kapalı', 'Orta', 'Yüksek'][level]);
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_mute_led + (levelNames[level] || level));
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchVolumeLimiter = function(enabled) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ volume_limiter: enabled })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Ses sınırlayıcı (85 dB): ' + (enabled ? 'Açık' : 'Kapalı'));
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_vol_limit + (enabled ? dict.state_enabled : dict.state_disabled));
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchAutoOffMinutes = function(mins) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     const validMinutes = [5, 15, 30, 0];
     document.querySelectorAll('#seg-auto-off .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', validMinutes[i] === mins);
@@ -1347,21 +1625,23 @@ pre#raw-telemetry-json {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inactivity_timer_mins: mins, auto_off_minutes: mins })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Otomatik kapanma: ' + (mins === 0 ? 'Kapalı' : mins + ' dk'));
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_auto_off + (mins === 0 ? dict.off : mins + dict.min_unit));
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchBtPowerDefault = function(enabled) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bt_power_on_default: enabled, bt_auto_power_on: enabled })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('Bluetooth otomatik açılma: ' + (enabled ? 'Açık' : 'Kapalı'));
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_bt_power + (enabled ? dict.state_enabled : dict.state_disabled));
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
   window.patchBtCallBehavior = function(behavior) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
     document.querySelectorAll('#seg-bt-call .seg-item-btn').forEach((b, i) => {
       b.classList.toggle('active', list[i] === behavior);
@@ -1371,29 +1651,44 @@ pre#raw-telemetry-json {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bt_call_behavior: behavior, bt_call_attenuation: behavior })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showToast('BT Çağrı davranışı güncellendi');
-    }).catch(e => showToast('Hata: ' + e.message));
+      if (d.ok) showToast(dict.toast_bt_call);
+    }).catch(e => showToast('Error: ' + e.message));
   };
 
-  window.triggerSaveFlash = function() {
+  window.triggerSaveHeadset = function() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     fetch('/api/save-flash', { method: 'POST' })
       .then(r => r.json())
       .then(d => {
-        showToast('Ayarlar kulaklık kalıcı hafızasına yazıldı (0x09)');
+        showToast(dict.save_headset_success);
       })
-      .catch(e => showToast('Hata: ' + e.message));
+      .catch(e => showToast((dict.save_headset_fail || 'Error: ') + e.message));
   };
+  window.triggerSaveFlash = window.triggerSaveHeadset;
 
   window.copyRawJson = function() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
     const text = document.getElementById('raw-telemetry-json').textContent;
     navigator.clipboard.writeText(text).then(() => {
-      showToast('JSON panoya kopyalandı');
+      showToast(dict.toast_json_copied);
     });
   };
 
   // ── Telemetry & Status ──
   function applyStatus(st) {
     if (!st || typeof st !== 'object') return;
+    lastStatusData = st;
+
+    // Two-Way Settings Sync
+    const s = st.settings || {};
+    const t = st.telemetry || {};
+
+    if (s.language && s.language !== currentLang) {
+      setLanguage(s.language, false);
+      return;
+    }
+
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
 
     if (st.capabilities) {
       applyDeviceCapabilities(st.capabilities);
@@ -1404,20 +1699,20 @@ pre#raw-telemetry-json {
     const txtRf = document.getElementById('txt-rf');
     if (st.usb_connected) {
       dotRf.className = 'chip-dot connected';
-      txtRf.textContent = 'RF Bağlı (' + (st.product_id || '0x1038') + ')';
+      txtRf.textContent = dict.rf_connected + ' (' + (st.product_id || '0x1038') + ')';
     } else {
       dotRf.className = 'chip-dot warning';
-      txtRf.textContent = 'RF Bekleniyor';
+      txtRf.textContent = dict.rf_waiting;
     }
 
     // Battery
     const txtBat = document.getElementById('txt-battery');
     const isCharging = st.charging_state === 'charging';
     if (typeof st.battery_percent === 'number') {
-      txtBat.textContent = (isCharging ? '⚡ Şarj: %' : 'Pil: %') + st.battery_percent;
+      txtBat.textContent = (isCharging ? dict.battery_charging : dict.battery_label) + st.battery_percent;
       txtBat.style.color = st.battery_percent <= 15 ? 'var(--status-amber)' : (isCharging ? 'var(--status-green)' : 'var(--text-main)');
     } else {
-      txtBat.textContent = 'Pil: --%';
+      txtBat.textContent = dict.battery_label.replace('%', '--%');
     }
 
     // ChatMix
@@ -1426,10 +1721,6 @@ pre#raw-telemetry-json {
       const c = st.chatmix.chat || 0;
       document.getElementById('txt-chatmix').textContent = `${g}/${c}`;
     }
-
-    // Two-Way Settings Sync
-    const s = st.settings || {};
-    const t = st.telemetry || {};
 
     // Sidetone
     const sidetoneVal = (typeof t.sidetone_level === 'number') ? t.sidetone_level : s.sidetone_level;
@@ -1502,9 +1793,9 @@ pre#raw-telemetry-json {
 
     // Diagnostics Tab
     document.getElementById('diag-battery').textContent = (typeof st.battery_percent === 'number') ? `${st.battery_percent}%` : 'N/A';
-    document.getElementById('diag-charging').textContent = st.charging_state || 'Standby';
+    document.getElementById('diag-charging').textContent = isCharging ? dict.charging_state_charging : (st.charging_state === 'not_charging' ? dict.charging_state_not_charging : (st.charging_state || 'Standby'));
     document.getElementById('diag-wireless').textContent = (st.wireless_state || 'disconnected').toUpperCase();
-    document.getElementById('diag-mic').textContent = st.mic_muted === true ? 'Sessizde' : (st.mic_muted === false ? 'Açık' : 'Bilinmiyor');
+    document.getElementById('diag-mic').textContent = st.mic_muted === true ? dict.mic_state_muted : (st.mic_muted === false ? dict.mic_state_active : dict.mic_state_unknown);
     document.getElementById('raw-telemetry-json').textContent = JSON.stringify(st, null, 2);
 
     if (st.last_updated_ms) {
@@ -1552,9 +1843,18 @@ pre#raw-telemetry-json {
       const res = await fetch('/api/status');
       if (res.ok) {
         const data = await res.json();
+        if (data.settings && data.settings.language) {
+          setLanguage(data.settings.language, false);
+        } else {
+          setLanguage('tr', false);
+        }
         applyStatus(data);
+      } else {
+        setLanguage('tr', false);
       }
-    } catch(e) {}
+    } catch(e) {
+      setLanguage('tr', false);
+    }
 
     connectSse();
     startPolling();

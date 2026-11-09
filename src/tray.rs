@@ -15,7 +15,7 @@
 //   * 'Quit' to shut down daemon.
 
 use crate::eq::{EqChannel, ParametricEqProfile};
-use crate::state::{DeviceCommand, DeviceWorkerHandle, HeadsetState};
+use crate::state::{DeviceCommand, DeviceWorkerHandle, HardwareSettingsPatch, HeadsetState};
 use anyhow::{Context, Result};
 use ksni::blocking::TrayMethods;
 use ksni::menu::{CheckmarkItem, MenuItem, StandardItem, SubMenu};
@@ -253,30 +253,74 @@ pub fn determine_icon_color(state: &HeadsetState) -> [u8; 4] {
 }
 
 /// Formats human-readable status string for connection and battery.
+#[allow(dead_code)]
 pub fn format_connection_status(state: &HeadsetState) -> String {
+    format_connection_status_lang(state, &state.config.language)
+}
+
+pub fn format_connection_status_lang(state: &HeadsetState, lang: &str) -> String {
+    let is_tr = !lang.eq_ignore_ascii_case("en");
     let connected = state.usb_connected && state.telemetry.wireless.is_connected();
     if !connected {
-        return "Status: Disconnected".to_string();
+        return if is_tr {
+            "Durum: Bağlantı Yok".to_string()
+        } else {
+            "Status: Disconnected".to_string()
+        };
     }
 
     if state.telemetry.charging.is_charging() {
         match state.telemetry.battery_percent {
-            Some(pct) => format!("Status: Charging ({}%)", pct),
-            None => "Status: Charging".to_string(),
+            Some(pct) => {
+                if is_tr {
+                    format!("Durum: Şarj Oluyor (%{})", pct)
+                } else {
+                    format!("Status: Charging ({}%)", pct)
+                }
+            }
+            None => {
+                if is_tr {
+                    "Durum: Şarj Oluyor".to_string()
+                } else {
+                    "Status: Charging".to_string()
+                }
+            }
         }
     } else {
         match state.telemetry.battery_percent {
-            Some(pct) => format!("Status: Connected ({}%)", pct),
-            None => "Status: Connected".to_string(),
+            Some(pct) => {
+                if is_tr {
+                    format!("Durum: Bağlı (%{})", pct)
+                } else {
+                    format!("Status: Connected ({}%)", pct)
+                }
+            }
+            None => {
+                if is_tr {
+                    "Durum: Bağlı".to_string()
+                } else {
+                    "Status: Connected".to_string()
+                }
+            }
         }
     }
 }
 
 /// Formats human-readable ChatMix volume status string.
+#[allow(dead_code)]
 pub fn format_chatmix_status(state: &HeadsetState) -> String {
+    format_chatmix_status_lang(state, &state.config.language)
+}
+
+pub fn format_chatmix_status_lang(state: &HeadsetState, lang: &str) -> String {
+    let is_tr = !lang.eq_ignore_ascii_case("en");
     let game = state.telemetry.game_volume.unwrap_or(100);
     let chat = state.telemetry.chat_volume.unwrap_or(100);
-    format!("ChatMix: Game {}% / Chat {}%", game, chat)
+    if is_tr {
+        format!("ChatMix: Oyun %{} / Sohbet %{}", game, chat)
+    } else {
+        format!("ChatMix: Game {}% / Chat {}%", game, chat)
+    }
 }
 
 /// Builds preset selection items for a given audio channel submenu.
@@ -363,14 +407,17 @@ impl Tray for ArctisTray {
 
     fn tool_tip(&self) -> ToolTip {
         let (status_str, chatmix_str, color) = match self.current_state() {
-            Some(st) => (
-                format_connection_status(&st),
-                format_chatmix_status(&st),
-                determine_icon_color(&st),
-            ),
+            Some(st) => {
+                let lang = st.config.language.clone();
+                (
+                    format_connection_status_lang(&st, &lang),
+                    format_chatmix_status_lang(&st, &lang),
+                    determine_icon_color(&st),
+                )
+            }
             None => (
-                "Status: Disconnected".to_string(),
-                "ChatMix: Game 100% / Chat 100%".to_string(),
+                "Durum: Bağlantı Yok".to_string(),
+                "ChatMix: Oyun %100 / Sohbet %100".to_string(),
                 COLOR_DISCONNECTED,
             ),
         };
@@ -389,19 +436,24 @@ impl Tray for ArctisTray {
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
         let state = self.current_state();
+        let lang = state
+            .as_ref()
+            .map(|s| s.config.language.clone())
+            .unwrap_or_else(|| "tr".to_string());
+        let is_tr = !lang.eq_ignore_ascii_case("en");
 
         let (status_label, chatmix_label, presets, active_24g, active_bt, active_mic) = match state {
             Some(st) => (
-                format_connection_status(&st),
-                format_chatmix_status(&st),
+                format_connection_status_lang(&st, &lang),
+                format_chatmix_status_lang(&st, &lang),
                 st.available_presets.clone(),
                 st.config.active_profile_24g.clone(),
                 st.config.active_profile_bt.clone(),
                 st.config.active_profile_mic.clone(),
             ),
             None => (
-                "Status: Disconnected".to_string(),
-                "ChatMix: Game 100% / Chat 100%".to_string(),
+                if is_tr { "Durum: Bağlantı Yok".to_string() } else { "Status: Disconnected".to_string() },
+                if is_tr { "ChatMix: Oyun %100 / Sohbet %100".to_string() } else { "ChatMix: Game 100% / Chat 100%".to_string() },
                 Vec::new(),
                 "flat".to_string(),
                 "harman".to_string(),
@@ -412,7 +464,7 @@ impl Tray for ArctisTray {
         vec![
             // 1. Open Control Panel (Left or Right Click primary entry)
             StandardItem {
-                label: "Open Control Panel".into(),
+                label: if is_tr { "Kontrol Panelini Aç".into() } else { "Open Control Panel".into() },
                 activate: Box::new({
                     let url = self.web_url.clone();
                     move |_| open_browser(&url)
@@ -437,10 +489,10 @@ impl Tray for ArctisTray {
             MenuItem::Separator,
             // 3. Mode SubMenu (2.4G, Bluetooth, Microphone)
             SubMenu {
-                label: "Mode".into(),
+                label: if is_tr { "Mod".into() } else { "Mode".into() },
                 submenu: vec![
                     SubMenu {
-                        label: "2.4G".into(),
+                        label: if is_tr { "2.4G Kulaklık".into() } else { "2.4G".into() },
                         submenu: build_preset_items(
                             &presets,
                             &active_24g,
@@ -462,7 +514,7 @@ impl Tray for ArctisTray {
                     }
                     .into(),
                     SubMenu {
-                        label: "Microphone".into(),
+                        label: if is_tr { "Mikrofon".into() } else { "Microphone".into() },
                         submenu: build_preset_items(
                             &presets,
                             &active_mic,
@@ -477,9 +529,56 @@ impl Tray for ArctisTray {
             }
             .into(),
             MenuItem::Separator,
-            // 4. Quit
+            // 4. Language Selection SubMenu
+            SubMenu {
+                label: if is_tr { "Dil (Language)".into() } else { "Language (Dil)".into() },
+                submenu: vec![
+                    CheckmarkItem {
+                        label: "Türkçe".into(),
+                        checked: is_tr,
+                        activate: Box::new({
+                            let handle = self.worker_handle.clone();
+                            move |_| {
+                                let (tx, _rx) = std::sync::mpsc::channel();
+                                let _ = handle.send_command(DeviceCommand::UpdateSettings {
+                                    patch: HardwareSettingsPatch {
+                                        language: Some("tr".to_string()),
+                                        ..Default::default()
+                                    },
+                                    reply: tx,
+                                });
+                            }
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                    CheckmarkItem {
+                        label: "English".into(),
+                        checked: !is_tr,
+                        activate: Box::new({
+                            let handle = self.worker_handle.clone();
+                            move |_| {
+                                let (tx, _rx) = std::sync::mpsc::channel();
+                                let _ = handle.send_command(DeviceCommand::UpdateSettings {
+                                    patch: HardwareSettingsPatch {
+                                        language: Some("en".to_string()),
+                                        ..Default::default()
+                                    },
+                                    reply: tx,
+                                });
+                            }
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                ],
+                ..Default::default()
+            }
+            .into(),
+            MenuItem::Separator,
+            // 5. Quit
             StandardItem {
-                label: "Quit".into(),
+                label: if is_tr { "Çıkış".into() } else { "Quit".into() },
                 activate: Box::new({
                     let running = self.running.clone();
                     move |_| {
@@ -614,8 +713,8 @@ mod tests {
             vec![],
         );
 
-        // Disconnected
-        assert_eq!(format_connection_status(&state), "Status: Disconnected");
+        // Turkish (default)
+        assert_eq!(format_connection_status(&state), "Durum: Bağlantı Yok");
 
         // Connected
         state.usb_connected = true;
@@ -624,16 +723,27 @@ mod tests {
         state.telemetry.charging = ChargingState::NotCharging;
         assert_eq!(
             format_connection_status(&state),
-            "Status: Connected (85%)"
+            "Durum: Bağlı (%85)"
         );
 
         // Charging
         state.telemetry.charging = ChargingState::Charging;
-        assert_eq!(format_connection_status(&state), "Status: Charging (85%)");
+        assert_eq!(format_connection_status(&state), "Durum: Şarj Oluyor (%85)");
 
         // ChatMix
         state.telemetry.game_volume = Some(50);
         state.telemetry.chat_volume = Some(50);
+        assert_eq!(
+            format_chatmix_status(&state),
+            "ChatMix: Oyun %50 / Sohbet %50"
+        );
+
+        // English explicit
+        state.config.language = "en".to_string();
+        assert_eq!(
+            format_connection_status(&state),
+            "Status: Charging (85%)"
+        );
         assert_eq!(
             format_chatmix_status(&state),
             "ChatMix: Game 50% / Chat 50%"
@@ -653,7 +763,7 @@ mod tests {
         // Tooltip
         let tooltip = tray.tool_tip();
         assert_eq!(tooltip.title, "Arctis Nova 7");
-        assert!(tooltip.description.contains("Status: Disconnected"));
+        assert!(tooltip.description.contains("Durum: Bağlantı Yok"));
         assert!(!tooltip.icon_pixmap.is_empty());
 
         // Pixmap
@@ -662,13 +772,13 @@ mod tests {
         assert_eq!(pixmap[0].width, 32);
         assert_eq!(pixmap[0].height, 32);
 
-        // Menu items
+        // Menu items (Open, Separator, Status, ChatMix, Separator, Mode, Separator, Language, Separator, Quit)
         let menu_items = tray.menu();
-        assert_eq!(menu_items.len(), 8);
+        assert_eq!(menu_items.len(), 10);
 
         // 1. Open Control Panel
         match &menu_items[0] {
-            MenuItem::Standard(item) => assert_eq!(item.label, "Open Control Panel"),
+            MenuItem::Standard(item) => assert_eq!(item.label, "Kontrol Panelini Aç"),
             other => panic!("Expected Standard item, got {:?}", other),
         }
 
@@ -678,7 +788,7 @@ mod tests {
         // 3. Status
         match &menu_items[2] {
             MenuItem::Standard(item) => {
-                assert_eq!(item.label, "Status: Disconnected");
+                assert_eq!(item.label, "Durum: Bağlantı Yok");
                 assert!(!item.enabled);
             }
             other => panic!("Expected Standard item, got {:?}", other),
@@ -687,7 +797,7 @@ mod tests {
         // 4. ChatMix
         match &menu_items[3] {
             MenuItem::Standard(item) => {
-                assert!(item.label.starts_with("ChatMix: Game"));
+                assert!(item.label.starts_with("ChatMix: Oyun"));
                 assert!(!item.enabled);
             }
             other => panic!("Expected Standard item, got {:?}", other),
@@ -699,7 +809,7 @@ mod tests {
         // 6. Mode SubMenu
         match &menu_items[5] {
             MenuItem::SubMenu(mode_sub) => {
-                assert_eq!(mode_sub.label, "Mode");
+                assert_eq!(mode_sub.label, "Mod");
                 assert_eq!(mode_sub.submenu.len(), 3);
             }
             other => panic!("Expected SubMenu item, got {:?}", other),
@@ -708,9 +818,21 @@ mod tests {
         // 7. Separator
         assert!(matches!(&menu_items[6], MenuItem::Separator));
 
-        // 8. Quit
+        // 8. Language SubMenu
         match &menu_items[7] {
-            MenuItem::Standard(item) => assert_eq!(item.label, "Quit"),
+            MenuItem::SubMenu(lang_sub) => {
+                assert_eq!(lang_sub.label, "Dil (Language)");
+                assert_eq!(lang_sub.submenu.len(), 2);
+            }
+            other => panic!("Expected SubMenu item, got {:?}", other),
+        }
+
+        // 9. Separator
+        assert!(matches!(&menu_items[8], MenuItem::Separator));
+
+        // 10. Quit
+        match &menu_items[9] {
+            MenuItem::Standard(item) => assert_eq!(item.label, "Çıkış"),
             other => panic!("Expected Standard item, got {:?}", other),
         }
     }

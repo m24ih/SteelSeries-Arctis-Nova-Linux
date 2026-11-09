@@ -518,6 +518,7 @@ fn handle_post_settings(
         auto_apply_on_connect: extract_json_bool(body, "auto_apply_on_connect"),
         save_to_flash: extract_json_bool(body, "save_to_flash"),
         poll_status_interval_secs: extract_json_u64(body, "poll_status_interval_secs"),
+        language: extract_json_string(body, "language"),
     };
 
     let (tx, rx) = mpsc::channel();

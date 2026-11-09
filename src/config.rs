@@ -62,6 +62,7 @@ pub struct AppConfig {
     pub web_enabled: bool,
     pub web_bind: String,
     pub tray_enabled: bool,
+    pub language: String,
     pub hardware: HardwareConfig,
 }
 
@@ -78,6 +79,7 @@ impl Default for AppConfig {
             web_enabled: true,
             web_bind: DEFAULT_WEB_BIND.to_string(),
             tray_enabled: true,
+            language: "tr".to_string(),
             hardware: HardwareConfig::default(),
         }
     }
@@ -115,6 +117,8 @@ web_enabled = {web_enabled}
 web_bind = "{web_bind}"
 # System tray indicator & context menu
 tray_enabled = {tray_enabled}
+# UI & System Tray language ("tr" or "en")
+language = "{language}"
 
 [hardware]
 # Hardware sidetone (0x39 / 0x0939): level 0 (Off), 1 (Low), 2 (Medium), 3 (High)
@@ -143,6 +147,7 @@ bt_call_behavior = "{bt_call}"
             web_enabled = self.web_enabled,
             web_bind = escape_toml_str(&self.web_bind),
             tray_enabled = self.tray_enabled,
+            language = escape_toml_str(&self.language),
             sidetone_enabled = self.hardware.sidetone_enabled,
             sidetone_level = self.hardware.sidetone_level.min(MAX_SIDETONE_LEVEL),
             mic_gain = self.hardware.mic_gain.min(MAX_MIC_VOLUME_LEVEL),
@@ -210,6 +215,14 @@ bt_call_behavior = "{bt_call}"
                 "tray_enabled" => {
                     if let Some(b) = parse_bool(val) {
                         cfg.tray_enabled = b;
+                    }
+                }
+                "language" => {
+                    let parsed = unquote_toml_str(val).trim().to_lowercase();
+                    if parsed == "en" {
+                        cfg.language = "en".to_string();
+                    } else {
+                        cfg.language = "tr".to_string();
                     }
                 }
                 "web_bind" => {
@@ -677,18 +690,21 @@ mod tests {
         assert_eq!(cfg.active_profile_24g, "flat");
         assert_eq!(cfg.active_profile_bt, "harman");
         assert_eq!(cfg.active_profile_mic, "flat");
+        assert_eq!(cfg.language, "tr");
 
         let toml_str = cfg.to_toml_string();
         assert!(toml_str.contains("active_profile_24g = \"flat\""));
         assert!(toml_str.contains("active_profile_bt = \"harman\""));
         assert!(toml_str.contains("active_profile_mic = \"flat\""));
         assert!(toml_str.contains("tray_enabled = true"));
+        assert!(toml_str.contains("language = \"tr\""));
 
         let loaded = AppConfig::from_toml_str(&toml_str).expect("Failed to parse config TOML");
         assert_eq!(loaded.active_profile_24g, "flat");
         assert_eq!(loaded.active_profile_bt, "harman");
         assert_eq!(loaded.active_profile_mic, "flat");
         assert_eq!(loaded.tray_enabled, true);
+        assert_eq!(loaded.language, "tr");
     }
 
     #[test]
@@ -704,6 +720,7 @@ auto_apply_on_connect = false
         assert_eq!(loaded.active_profile_24g, "fps");
         assert_eq!(loaded.active_profile_bt, "harman"); // Default
         assert_eq!(loaded.active_profile_mic, "flat");   // Default
+        assert_eq!(loaded.language, "tr");             // Default
     }
 
     #[test]

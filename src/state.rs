@@ -94,6 +94,7 @@ pub struct HardwareSettingsPatch {
     pub auto_apply_on_connect: Option<bool>,
     pub save_to_flash: Option<bool>,
     pub poll_status_interval_secs: Option<u64>,
+    pub language: Option<String>,
 }
 
 /// Complete snapshot of the headset, active EQ, and configuration state shared with the Web Server.
@@ -366,6 +367,7 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
             "\"auto_apply_on_connect\":{},",
             "\"save_to_flash\":{},",
             "\"poll_status_interval_secs\":{},",
+            "\"language\":\"{}\",",
             "\"web_bind\":\"{}\",",
             "\"tray_enabled\":{}",
             "}}"
@@ -385,6 +387,7 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
         config.auto_apply_on_connect,
         config.save_to_flash,
         config.poll_status_interval_secs,
+        escape_json(&config.language),
         escape_json(&config.web_bind),
         config.tray_enabled
     )
@@ -743,6 +746,10 @@ impl DeviceWorker {
                         }
                         if let Some(poll_secs) = patch.poll_status_interval_secs {
                             st.config.poll_status_interval_secs = poll_secs.max(2);
+                        }
+                        if let Some(lang) = patch.language {
+                            let norm = if lang.trim().eq_ignore_ascii_case("en") { "en" } else { "tr" };
+                            st.config.language = norm.to_string();
                         }
 
                         let _ = self.handle.config_manager.save_config(&st.config);
