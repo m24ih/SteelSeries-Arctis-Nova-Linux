@@ -195,7 +195,87 @@ pub fn device_name(product_id: u16) -> &'static str {
         0x22a5 => "Arctis Nova 7X",
         0x22a9 => "Arctis Nova 7 Diablo IV TX",
         0x22ad => "Arctis Nova 7X v2",
+        0x12e0 | 0x12e2 => "Arctis Nova Pro Wireless",
+        0x12e4 | 0x12e6 => "Arctis Nova Pro",
         _ => "Arctis Nova 7",
+    }
+}
+
+/// Hardware capabilities and control limits for SteelSeries headsets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceCapabilities {
+    pub device_name: &'static str,
+    pub mic_gain_max: u8,
+    pub mic_gain_steps: u8,
+    pub sidetone_max: u8,
+    pub mute_led_max: u8,
+    pub has_chatmix: bool,
+    pub has_10band_eq: bool,
+    pub has_bt: bool,
+    pub has_mic_eq: bool,
+    pub auto_off_options: &'static [u8],
+}
+
+impl DeviceCapabilities {
+    pub fn to_json(&self) -> String {
+        format!(
+            concat!(
+                "{{",
+                "\"device_name\":\"{}\",",
+                "\"mic_gain_max\":{},",
+                "\"mic_gain_steps\":{},",
+                "\"sidetone_max\":{},",
+                "\"mute_led_max\":{},",
+                "\"has_chatmix\":{},",
+                "\"has_10band_eq\":{},",
+                "\"has_bt\":{},",
+                "\"has_mic_eq\":{},",
+                "\"auto_off_options\":[0,5,15,30]",
+                "}}"
+            ),
+            self.device_name,
+            self.mic_gain_max,
+            self.mic_gain_steps,
+            self.sidetone_max,
+            self.mute_led_max,
+            self.has_chatmix,
+            self.has_10band_eq,
+            self.has_bt,
+            self.has_mic_eq
+        )
+    }
+}
+
+/// Returns `true` if the device supports 16-step (0..=15) mic gain rather than Nova 7's 8-step (0..=7).
+pub fn is_16_step_mic_device(product_id: u16) -> bool {
+    matches!(
+        product_id,
+        0x12e0 | 0x12e2 | 0x12e4 | 0x12e6
+    )
+}
+
+/// Computes hardware capabilities and control limits based on connected product ID.
+pub fn get_device_capabilities(product_id: Option<u16>) -> DeviceCapabilities {
+    let pid = product_id.unwrap_or(0x2200);
+    let dev_name = device_name(pid);
+
+    let (mic_gain_max, mic_gain_steps) = if is_16_step_mic_device(pid) {
+        (15, 16)
+    } else {
+        (MAX_MIC_VOLUME_LEVEL, MAX_MIC_VOLUME_LEVEL + 1)
+    };
+
+    DeviceCapabilities {
+        device_name: dev_name,
+        mic_gain_max,
+        mic_gain_steps,
+        sidetone_max: MAX_SIDETONE_LEVEL,
+        mute_led_max: 2,
+        has_chatmix: true,
+        has_10band_eq: true,
+        has_bt: true,
+        has_mic_eq: true,
+        auto_off_options: &[0, 5, 15, 30],
     }
 }
 
@@ -471,5 +551,21 @@ mod tests {
         let eq_mic = build_eq_name_query_report(2);
         assert_eq!(eq_mic[1], 0xA6);
         assert_eq!(eq_mic[2], 2);
+    }
+
+    #[test]
+    fn test_device_capabilities_nova_7_and_pro() {
+        // Nova 7 should strictly have 8 steps (0..=7)
+        let nova7_caps = get_device_capabilities(Some(0x22a1));
+        assert_eq!(nova7_caps.mic_gain_max, 7);
+        assert_eq!(nova7_caps.mic_gain_steps, 8);
+        assert_eq!(nova7_caps.sidetone_max, 3);
+        assert!(nova7_caps.to_json().contains("\"mic_gain_max\":7"));
+
+        // Nova Pro should have 16 steps (0..=15)
+        let pro_caps = get_device_capabilities(Some(0x12e0));
+        assert_eq!(pro_caps.mic_gain_max, 15);
+        assert_eq!(pro_caps.mic_gain_steps, 16);
+        assert!(pro_caps.to_json().contains("\"mic_gain_max\":15"));
     }
 }

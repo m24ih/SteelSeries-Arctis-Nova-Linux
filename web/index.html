@@ -968,8 +968,8 @@ pre.diag-json {
           <div class="hw-desc">Dahili donanımsal ADC mikrofon ön-yükseltici seviyesi</div>
         </div>
         <div class="hw-action">
-          <span id="lbl-mic-gain" style="font-family:var(--font-mono);font-size:0.875rem;font-weight:600;min-width:70px;text-align:right;">12 / 15</span>
-          <input type="range" class="m3-horizontal-slider" id="rng-mic-gain" min="0" max="15" value="12" step="1" oninput="onMicGainInput(this.value)" onchange="patchMicGain(this.value)" />
+          <span id="lbl-mic-gain" style="font-family:var(--font-mono);font-size:0.875rem;font-weight:600;min-width:70px;text-align:right;">7 / 7</span>
+          <input type="range" class="m3-horizontal-slider" id="rng-mic-gain" min="0" max="7" value="7" step="1" oninput="onMicGainInput(this.value)" onchange="patchMicGain(this.value)" />
         </div>
       </div>
 
@@ -1460,17 +1460,46 @@ pre.diag-json {
     }).catch(e => showSnackbar('Yan Ton hatası: ' + e.message));
   };
 
+  // Hardware capabilities dynamically provided by connected SteelSeries model
+  let currentCaps = {
+    device_name: 'SteelSeries Arctis Nova 7',
+    mic_gain_max: 7,
+    mic_gain_steps: 8,
+    sidetone_max: 3,
+    mute_led_max: 2,
+    auto_off_options: [5, 15, 30, 0]
+  };
+
+  function applyDeviceCapabilities(caps) {
+    if (!caps || typeof caps !== 'object') return;
+    currentCaps = Object.assign(currentCaps, caps);
+
+    const rng = document.getElementById('rng-mic-gain');
+    if (rng) {
+      rng.max = String(currentCaps.mic_gain_max);
+      if (Number(rng.value) > currentCaps.mic_gain_max) {
+        rng.value = String(currentCaps.mic_gain_max);
+      }
+    }
+    const lbl = document.getElementById('lbl-mic-gain');
+    if (lbl && rng) {
+      lbl.textContent = rng.value + ' / ' + currentCaps.mic_gain_max;
+    }
+  }
+
   window.onMicGainInput = function(val) {
-    document.getElementById('lbl-mic-gain').textContent = val + ' / 15';
+    const max = currentCaps.mic_gain_max || 7;
+    document.getElementById('lbl-mic-gain').textContent = val + ' / ' + max;
   };
 
   window.patchMicGain = function(val) {
+    const max = currentCaps.mic_gain_max || 7;
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mic_gain: Number(val) })
     }).then(r => r.json()).then(d => {
-      if (d.ok) showSnackbar('Mikrofon kazancı ayarlandı: ' + val + ' / 15');
+      if (d.ok) showSnackbar('Mikrofon kazancı ayarlandı: ' + val + ' / ' + max);
     }).catch(e => showSnackbar('Hata: ' + e.message));
   };
 
@@ -1555,6 +1584,10 @@ pre.diag-json {
   function applyStatus(st) {
     if (!st || typeof st !== 'object') return;
 
+    if (st.capabilities) {
+      applyDeviceCapabilities(st.capabilities);
+    }
+
     // Wireless connection pill
     const pillWireless = document.getElementById('pill-wireless');
     const txtWireless = document.getElementById('txt-wireless');
@@ -1599,15 +1632,18 @@ pre.diag-json {
       document.querySelectorAll('#seg-sidetone .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === effectiveLvl));
     }
 
-    // Mic Gain
+    // Mic Gain (Dynamic capability based: 0..=7 for Nova 7, 0..=15 for Nova Pro)
     const micGainVal = (typeof t.mic_gain === 'number') ? t.mic_gain : s.mic_gain;
     if (typeof micGainVal === 'number') {
+      const max = currentCaps.mic_gain_max || 7;
+      const clampedVal = Math.min(micGainVal, max);
       const rng = document.getElementById('rng-mic-gain');
       if (rng && document.activeElement !== rng) {
-        rng.value = String(micGainVal);
+        rng.max = String(max);
+        rng.value = String(clampedVal);
       }
       const lbl = document.getElementById('lbl-mic-gain');
-      if (lbl) lbl.textContent = micGainVal + ' / 15';
+      if (lbl) lbl.textContent = clampedVal + ' / ' + max;
     }
 
     // Mute LED Brightness

@@ -177,6 +177,7 @@ impl HeadsetState {
             .product_id
             .map(|pid| format!("\"0x{:04x}\"", pid))
             .unwrap_or_else(|| "null".to_string());
+        let caps_json = crate::device::get_device_capabilities(self.product_id).to_json();
 
         format!(
             concat!(
@@ -198,6 +199,7 @@ impl HeadsetState {
                 "\"eq_24g\":{},",
                 "\"eq_bt\":{},",
                 "\"eq_mic\":{},",
+                "\"capabilities\":{},",
                 "\"telemetry\":{},",
                 "\"settings\":{},",
                 "\"last_updated_ms\":{}",
@@ -221,6 +223,7 @@ impl HeadsetState {
             eq_profile_to_json(&self.active_eq_24g),
             eq_profile_to_json(&self.active_eq_bt),
             eq_profile_to_json(&self.active_eq_mic),
+            caps_json,
             telemetry_to_json(&self.telemetry),
             config_to_settings_json(&self.config),
             self.last_updated_ms
