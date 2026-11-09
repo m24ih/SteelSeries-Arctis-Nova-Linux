@@ -49,19 +49,106 @@ pub fn format_web_url(bind: &str) -> String {
     }
 }
 
-/// Spawns default browser to open the given URL via `xdg-open`.
+/// Enriches a Command with essential GUI / desktop session environment variables
+/// if they are missing (e.g. when spawned inside a systemd user service without desktop env).
+pub fn enrich_gui_command(cmd: &mut std::process::Command) {
+    // 1. WAYLAND_DISPLAY detection: look in XDG_RUNTIME_DIR for wayland-0, wayland-1, etc.
+    if std::env::var_os("WAYLAND_DISPLAY").is_none() {
+        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+            let runtime_path = std::path::Path::new(&runtime_dir);
+            for i in 0..=5 {
+                let candidate = format!("wayland-{}", i);
+                if runtime_path.join(&candidate).exists() {
+                    cmd.env("WAYLAND_DISPLAY", candidate);
+                    break;
+                }
+            }
+        }
+    }
+
+    // 2. DISPLAY detection: look in /tmp/.X11-unix/X0, X1, etc., or fallback to :0
+    if std::env::var_os("DISPLAY").is_none() {
+        let x11_dir = std::path::Path::new("/tmp/.X11-unix");
+        let mut display = ":0".to_string();
+        if x11_dir.is_dir() {
+            for i in 0..=5 {
+                let candidate = format!("X{}", i);
+                if x11_dir.join(&candidate).exists() {
+                    display = format!(":{}", i);
+                    break;
+                }
+            }
+        }
+        cmd.env("DISPLAY", display);
+    }
+
+    // 3. DBUS_SESSION_BUS_ADDRESS detection: check $XDG_RUNTIME_DIR/bus
+    if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
+        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+            let bus_path = std::path::Path::new(&runtime_dir).join("bus");
+            if bus_path.exists() {
+                cmd.env("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={}", bus_path.display()));
+            }
+        }
+    }
+
+    // 4. XDG_CURRENT_DESKTOP fallback
+    if std::env::var_os("XDG_CURRENT_DESKTOP").is_none() {
+        let desktop = if std::path::Path::new("/usr/bin/plasmashell").exists()
+            || std::path::Path::new("/usr/bin/kwin_wayland").exists()
+        {
+            "KDE"
+        } else if std::path::Path::new("/usr/bin/gnome-shell").exists() {
+            "GNOME"
+        } else {
+            "X-Generic"
+        };
+        cmd.env("XDG_CURRENT_DESKTOP", desktop);
+    }
+}
+
+/// Spawns default browser to open the given URL with desktop environment awareness and fallbacks.
 pub fn open_browser(url: &str) {
     info!("Opening web browser at: {}", url);
-    let bin = if std::path::Path::new("/usr/bin/xdg-open").exists() {
-        "/usr/bin/xdg-open"
-    } else {
-        "xdg-open"
-    };
 
-    match std::process::Command::new(bin).arg(url).spawn() {
-        Ok(_) => debug!("Spawned {} for {}", bin, url),
-        Err(e) => warn!("Failed to launch browser ({}) for {}: {}", bin, url, e),
+    // List of candidates to try in priority order:
+    // 1. Standard freedesktop xdg-open
+    // 2. GIO open (handles desktop portals & DBus)
+    // 3. KDE-specific launchers
+    // 4. Direct browser binaries in PATH
+    let candidates: [(&str, &[&str]); 11] = [
+        ("xdg-open", &[url]),
+        ("gio", &["open", url]),
+        ("kioclient5", &["exec", url]),
+        ("kde-open5", &[url]),
+        ("vivaldi-stable", &[url]),
+        ("vivaldi", &[url]),
+        ("google-chrome-stable", &[url]),
+        ("google-chrome", &[url]),
+        ("chromium", &[url]),
+        ("firefox", &[url]),
+        ("brave", &[url]),
+    ];
+
+    for (binary, args) in candidates {
+        let mut cmd = std::process::Command::new(binary);
+        for arg in args {
+            cmd.arg(arg);
+        }
+        enrich_gui_command(&mut cmd);
+
+        match cmd.spawn() {
+            Ok(_) => {
+                debug!("Successfully spawned {} to open {}", binary, url);
+                return;
+            }
+            Err(e) => {
+                debug!("Candidate '{}' could not be launched: {}", binary, e);
+            }
+        }
     }
+
+    warn!("Failed to launch any browser candidate for {}", url);
 }
 
 /// Helper to set an ARGB32 pixel on the 32x32 buffer.
@@ -626,5 +713,13 @@ mod tests {
             MenuItem::Standard(item) => assert_eq!(item.label, "Quit"),
             other => panic!("Expected Standard item, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_enrich_gui_command() {
+        let mut cmd = std::process::Command::new("true");
+        enrich_gui_command(&mut cmd);
+        // Command should have DISPLAY configured or retained
+        // The helper should not panic under test environment
     }
 }

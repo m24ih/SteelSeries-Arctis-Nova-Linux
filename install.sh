@@ -293,9 +293,11 @@ install_user() {
 Description=Arctis Nova 7 ChatMix, 10-Band DSP EQ & Web Companion Service
 Documentation=https://github.com/m24ih/Arctis-Nova-7-Chatmix
 Wants=pipewire.service
-After=pipewire.service
+After=pipewire.service graphical-session.target
+PartOf=graphical-session.target
 [Service]
 ExecStart=%h/.local/bin/arctis_chatmix
+PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP DBUS_SESSION_BUS_ADDRESS
 Environment=ARCTIS_SIDETONE_DISABLE=1
 Environment=RUST_LOG=info
 Restart=on-failure
