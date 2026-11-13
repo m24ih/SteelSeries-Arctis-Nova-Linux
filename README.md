@@ -2,7 +2,7 @@
 
 Lightweight Linux daemon and hardware controller for the **SteelSeries Arctis Nova 7** headset family (`7`, `7P`, `7X`, `Gen 2`, `Diablo IV`, `WoW Edition`).
 
-It creates two PipeWire virtual sinks (`Arctis_Game` and `Arctis_Chat`), links them to your physical headset output, maps the hardware ChatMix dial in real time, provides **10-band hardware parametric DSP EQ (`0x33`)**, monitors live **battery & wireless telemetry (`0xB0` / `0xB7` / `0xB9` / `0xBB`)**, exposes full **onboard hardware controls** (Sidetone, ClearCast Mic Gain, EU Volume Limiter, Auto-Shutoff Timer, Mute LED Brightness, Bluetooth Power-On Default, and Bluetooth Call Mixing Behavior), and serves an **embedded Web Companion Dashboard at `http://127.0.0.1:3927`**.
+It creates two PipeWire virtual sinks (`Arctis_Game` and `Arctis_Chat`), links them to your physical headset output, maps the hardware ChatMix dial in real time, provides **Sonar-style per-app PipeWire audio routing** with persistent rules, **10-band hardware parametric DSP EQ (`0x33`)**, monitors live **battery & wireless telemetry (`0xB0` / `0xB7` / `0xB9` / `0xBB`)**, exposes full **onboard hardware controls** (Sidetone, ClearCast Mic Gain, EU Volume Limiter, Auto-Shutoff Timer, Mute LED Brightness, Bluetooth Power-On Default, and Bluetooth Call Mixing Behavior), and serves an **embedded Web Companion Dashboard at `http://127.0.0.1:3927`**.
 
 This repository contains:
 - Rust implementation of the PipeWire ChatMix daemon, USB HID / `hidraw` hardware DSP controller, XDG configuration manager, and embedded web server (`src/`)
@@ -85,10 +85,17 @@ Supported environment:
 - **Save to Onboard Flash (`0x09`)**: Persist active EQ and hardware settings directly to the headset's non-volatile memory
 
 ### 5. Embedded Web Companion Dashboard (`http://127.0.0.1:3927`)
-- Lightweight local web server bound strictly to `127.0.0.1:3927` (zero external runtime asset dependencies)
+- Lightweight local web server bound strictly to `127.0.0.1:3927` (zero external runtime asset dependencies, bilingual TR/EN UI)
+- **App Routing** tab (default landing view) with Sonar-style Game / Chat / Other output switching
 - Interactive 10-band EQ sliders with live preset switching and profile saving
 - Real-time battery, wireless connection, charging, and ChatMix telemetry via Server-Sent Events (SSE) / REST API
 - One-click toggles and sliders for Sidetone, Mic Gain, Volume Limiter, Auto-Shutoff, Mute LED, and Bluetooth Call Mixing
+
+### 6. Sonar-Style App Audio Routing (`[routing]`)
+- **Basic View**: Groups active PipeWire streams by application, displays native XDG application icons (`/api/icon`), and lets you route apps to `Arctis_Game`, `Arctis_Chat`, or any other PipeWire sink with one click while automatically saving rules to `~/.config/arctis-nova-7/config.toml`
+- **Advanced View**: Lists individual PipeWire `sink-input` streams (`Stream #ID`) for per-stream routing during the active session (useful when splitting multiple browser streams), alongside an option to save an app-wide rule
+- **Smart App Identification**: Automatically resolves generic runtime wrappers (`electron`, `python`, `node`, `java`) to `application.name` (e.g., `vesktop`) so rules never collide across unrelated apps
+- **Automatic Background Routing**: The daemon checks every 2 seconds and automatically moves newly opened application streams to their saved target sink without overriding manual per-stream adjustments
 
 ---
 
@@ -128,6 +135,11 @@ inactivity_timer_mins = 30
 mute_led_brightness = 2
 bt_power_on_default = false
 bt_call_behavior = "do_nothing"
+
+[routing]
+# Persistent application-to-sink routing rules ("app_key" = "sink_name")
+"vivaldi-bin" = "Arctis_Game"
+"vesktop" = "Arctis_Chat"
 ```
 
 ---
