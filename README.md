@@ -99,6 +99,19 @@ Supported environment:
 
 ---
 
+## Web Companion Screenshots
+
+### App Audio Routing (Sonar-Style)
+![App Audio Routing](docs/screenshots/app-routing.png)
+
+### 10-Band Parametric EQ
+![10-Band Parametric EQ](docs/screenshots/eq-studio.png)
+
+### Hardware Controls
+![Hardware Controls](docs/screenshots/hardware-controls.png)
+
+---
+
 ## Configuration Directory (`~/.config/arctis-nova-7/`)
 
 On first run (or via `arctis_chatmix --init-config`), the application initializes an XDG configuration directory at `$XDG_CONFIG_HOME/arctis-nova-7/` (default: `~/.config/arctis-nova-7/`):
