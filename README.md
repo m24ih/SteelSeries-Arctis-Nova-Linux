@@ -204,29 +204,27 @@ arctis_chatmix --apply-config
    cd Arctis-Nova-7-Chatmix
    ```
 
-2. Run the installer:
+2. Run the installer (builds `target/release/arctis_chatmix` automatically if needed, installs the user service & udev rules, and starts/restarts the daemon):
    ```bash
    chmod +x install.sh
    ./install.sh
    ```
-   The installer installs the binary, initializes `~/.config/arctis-nova-7/`, installs `/etc/udev/rules.d/99-arctis.rules` for all 20 Nova 7 Product IDs, and enables the systemd service.
+   Or install system-wide:
+   ```bash
+   ./install.sh --system
+   ```
 
 3. Open the Web Companion Dashboard in your browser:
    ```text
    http://127.0.0.1:3927
    ```
 
-### Non-interactive Examples
+### Installer Options
 
-- Per-user install:
-  ```bash
-  ./install.sh --binary ./arctis_chatmix --mode user --udev yes --enable-service yes --enable-linger no -y
-  ```
-
-- System install (requires sudo):
-  ```bash
-  sudo ./install.sh --binary ./arctis_chatmix --mode system --udev yes --enable-service yes -y
-  ```
+- `./install.sh` — Install or upgrade per-user service (default)
+- `./install.sh --system` — Install or upgrade system-wide service
+- `./install.sh --binary PATH` — Install a specific binary
+- `./install.sh --uninstall` — Remove service, binary, and udev rule (add `--system` for system-wide)
 
 ### Files the installer manages
 
@@ -255,14 +253,12 @@ sudo udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=1038
 
 ## Uninstallation
 
-Use `install.sh` with `--uninstall`:
-
 ```bash
-# Interactive
+# Per-user
 ./install.sh --uninstall
 
-# Non-interactive per-user uninstall
-./install.sh --uninstall --mode user --udev yes -y
+# System-wide
+./install.sh --uninstall --system
 ```
 
 > **Note:** User configuration and custom EQ profiles in `~/.config/arctis-nova-7/` are preserved during uninstallation. Virtual sinks (`Arctis_Game` / `Arctis_Chat`) disappear when the service stops or after your PipeWire session restarts.
