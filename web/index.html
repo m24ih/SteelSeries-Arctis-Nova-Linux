@@ -808,6 +808,16 @@ pre#raw-telemetry-json {
   border-radius: var(--radius-md);
   font-size: 0.88rem;
 }
+.routing-info-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
 </style>
 </head>
 <body>
@@ -1162,6 +1172,10 @@ pre#raw-telemetry-json {
       </div>
     </div>
 
+    <div id="routing-adv-note" class="routing-info-banner" style="display:none;" data-i18n="routing_adv_note">
+      Not: Linux/PipeWire üzerinde tarayıcılar tüm sekmeleri aynı işlem ve genel akış adıyla ("Playback") bildirir; sekme adları ses sunucusuna iletilmez. Tekil akış yönlendirmeleri bu oturum için anlık çalışır, "Uygulama Kuralı Kaydet" ise uygulamanın tamamı için kaydedilir.
+    </div>
+
     <div class="routing-section-title" id="routing-active-heading" data-i18n="routing_active_apps">Aktif Uygulamalar</div>
     <div id="routing-active-list" class="routing-list"></div>
 
@@ -1200,7 +1214,9 @@ pre#raw-telemetry-json {
       routing_empty_rules: 'Henüz kayıtlı uygulama kuralı yok.',
       routing_streams_count: ' akış',
       routing_clear_rule: 'Kuralı Sil',
-      routing_save_rule: 'Kural Kaydet',
+      routing_save_rule: 'Uygulama Kuralı Kaydet',
+      routing_stream_prefix: 'Akış #',
+      routing_adv_note: 'Not: Linux/PipeWire üzerinde tarayıcılar (Vivaldi, Chrome vb.) tüm sekmeleri aynı işlem ve genel akış adıyla ("Playback") bildirir; sekme veya video adları ses sunucusuna iletilmez. Tekil akış yönlendirmeleri bu oturum için anlık çalışır, "Uygulama Kuralı Kaydet" ise uygulamanın tamamı için kaydedilir.',
       routing_saved_toast: 'Yönlendirme güncellendi ve kaydedildi',
       routing_stream_moved_toast: 'Akış taşındı',
       routing_rule_cleared_toast: 'Kural silindi',
@@ -1289,7 +1305,9 @@ pre#raw-telemetry-json {
       routing_empty_rules: 'No saved application rules yet.',
       routing_streams_count: ' streams',
       routing_clear_rule: 'Clear Rule',
-      routing_save_rule: 'Save Rule',
+      routing_save_rule: 'Save App Rule',
+      routing_stream_prefix: 'Stream #',
+      routing_adv_note: 'Note: On Linux/PipeWire, browsers (Vivaldi, Chrome, etc.) report all tabs under the same process and generic stream name ("Playback"); tab or video titles are not exposed to the audio server. Per-stream routing applies immediately for this session, while "Save App Rule" saves a rule for the whole application.',
       routing_saved_toast: 'Routing updated and saved',
       routing_stream_moved_toast: 'Stream moved',
       routing_rule_cleared_toast: 'Rule cleared',
@@ -2155,6 +2173,11 @@ pre#raw-telemetry-json {
     if (activeHeading) {
       activeHeading.textContent = routingMode === 'advanced' ? dict.routing_active_streams : dict.routing_active_apps;
     }
+    const advNote = document.getElementById('routing-adv-note');
+    if (advNote) {
+      advNote.style.display = routingMode === 'advanced' ? 'block' : 'none';
+      advNote.textContent = dict.routing_adv_note;
+    }
 
     const streams = lastRoutingData.streams || [];
     const rules = lastRoutingData.rules || {};
@@ -2208,7 +2231,7 @@ pre#raw-telemetry-json {
     } else {
       activeList.innerHTML = streams.map(st => {
         const detail = st.media_title || st.media_name || st.app_key;
-        const streamBadge = `<span class="routing-badge">#${st.index}</span>`;
+        const streamBadge = `<span class="routing-badge">${escHtml(dict.routing_stream_prefix)}${st.index}</span>`;
         const sinkBadge = st.sink_name ? `<span class="routing-badge">${escHtml(sinkDescMap[st.sink_name] || st.sink_name)}</span>` : '';
         const controls = buildSinkControls(st.sink_name, '', target =>
           `routeStream(${st.index}, '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}', '${escHtml(st.app_key).replace(/'/g, "\\'")}', false)`
