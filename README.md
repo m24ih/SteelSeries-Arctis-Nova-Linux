@@ -12,6 +12,19 @@ This repository contains:
 
 ---
 
+## Web Companion Screenshots
+
+### App Audio Routing (Sonar-Style)
+![App Audio Routing](docs/screenshots/app-routing.png)
+
+### 10-Band Parametric EQ
+![10-Band Parametric EQ](docs/screenshots/eq-studio.png)
+
+### Hardware Controls
+![Hardware Controls](docs/screenshots/hardware-controls.png)
+
+---
+
 ## Supported Devices
 
 Supported environment:
@@ -96,19 +109,6 @@ Supported environment:
 - **Advanced View**: Lists individual PipeWire `sink-input` streams (`Stream #ID`) for per-stream routing during the active session (useful when splitting multiple browser streams), alongside an option to save an app-wide rule
 - **Smart App Identification**: Automatically resolves generic runtime wrappers (`electron`, `python`, `node`, `java`) to `application.name` (e.g., `vesktop`) so rules never collide across unrelated apps
 - **Automatic Background Routing**: The daemon checks every 2 seconds and automatically moves newly opened application streams to their saved target sink without overriding manual per-stream adjustments
-
----
-
-## Web Companion Screenshots
-
-### App Audio Routing (Sonar-Style)
-![App Audio Routing](docs/screenshots/app-routing.png)
-
-### 10-Band Parametric EQ
-![10-Band Parametric EQ](docs/screenshots/eq-studio.png)
-
-### Hardware Controls
-![Hardware Controls](docs/screenshots/hardware-controls.png)
 
 ---
 
