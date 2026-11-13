@@ -3,12 +3,14 @@
 # Usage:
 #   ./install.sh              # Install or upgrade (user service + udev + rtkit)
 #   ./install.sh --system     # Install or upgrade system-wide service
+#   ./install.sh --update     # Update to latest release binary (alias: --upgrade)
 #   ./install.sh --uninstall  # Remove service, binary, and udev rule
 set -euo pipefail
 
 BINARY=""
 SYSTEM_MODE="no"
 UNINSTALL="no"
+UPDATE_MODE="no"
 REPO="m24ih/SteelSeries-Arctis-Nova-Linux"
 RELEASE_BIN_URL="https://github.com/${REPO}/releases/latest/download/arctis_chatmix"
 TMP_DIR=""
@@ -30,6 +32,7 @@ ensures audio group membership, and starts/restarts the service.
 
 Options:
   --system         Install or uninstall system-wide instead of per-user
+  --update         Update to the latest release binary (alias: --upgrade)
   --uninstall      Remove arctis_chatmix service, binary, and udev rule
   --binary PATH    Use a specific arctis_chatmix binary
   -h, --help       Show this help and exit
@@ -40,6 +43,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
   --system)
     SYSTEM_MODE="yes"
+    shift
+    ;;
+  --update | --upgrade)
+    UPDATE_MODE="yes"
     shift
     ;;
   --uninstall)
@@ -99,6 +106,12 @@ SYSTEM_UNIT_DIR="/etc/systemd/system"
 UDEV_RULE_PATH="/etc/udev/rules.d/99-arctis.rules"
 WEB_DASHBOARD_URL="http://127.0.0.1:3927"
 
+# `--update` on an existing system-wide install must keep updating it in place.
+if [[ "$UPDATE_MODE" == "yes" && "$SYSTEM_MODE" != "yes" && -f "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" ]]; then
+  echo "Detected existing system-wide install; updating it in place."
+  SYSTEM_MODE="yes"
+fi
+
 # All 23 SteelSeries Arctis Nova 7 RX & TX Product IDs
 PIDS=(
   "2200" "2202" "2204" "2206" "2208" "220a"
@@ -126,12 +139,43 @@ download_file() {
   fi
 }
 
+fetch_remote_binary() {
+  TMP_DIR="$(mktemp -d)"
+  local arch
+  arch="$(uname -m)"
+  if [[ "$arch" == "x86_64" ]]; then
+    echo "Downloading latest prebuilt binary from GitHub Releases..."
+    if download_file "$RELEASE_BIN_URL" "${TMP_DIR}/arctis_chatmix"; then
+      chmod +x "${TMP_DIR}/arctis_chatmix"
+      BINARY="${TMP_DIR}/arctis_chatmix"
+      return
+    fi
+    echo "[warn] Prebuilt release download failed; falling back to source build..." >&2
+  fi
+
+  if command -v git >/dev/null 2>&1 && command -v cargo >/dev/null 2>&1; then
+    echo "Cloning shallow repository and building with cargo..."
+    git clone --depth 1 "https://github.com/${REPO}.git" "${TMP_DIR}/repo"
+    (cd "${TMP_DIR}/repo" && cargo build --release)
+    BINARY="${TMP_DIR}/repo/target/release/arctis_chatmix"
+  else
+    echo "Could not download prebuilt binary and git/cargo are not available." >&2
+    exit 2
+  fi
+}
+
 resolve_binary() {
   if [[ -n "$BINARY" ]]; then
     if [[ ! -f "$BINARY" ]]; then
       echo "Binary not found: $BINARY" >&2
       exit 2
     fi
+    return
+  fi
+
+  # Update mode always fetches the latest release instead of using a local build.
+  if [[ "$UPDATE_MODE" == "yes" ]]; then
+    fetch_remote_binary
     return
   fi
 
@@ -144,28 +188,7 @@ resolve_binary() {
     (cd "$SCRIPT_DIR" && cargo build --release)
     BINARY="${SCRIPT_DIR}/target/release/arctis_chatmix"
   else
-    TMP_DIR="$(mktemp -d)"
-    local arch
-    arch="$(uname -m)"
-    if [[ "$arch" == "x86_64" ]]; then
-      echo "Downloading latest prebuilt binary from GitHub Releases..."
-      if download_file "$RELEASE_BIN_URL" "${TMP_DIR}/arctis_chatmix"; then
-        chmod +x "${TMP_DIR}/arctis_chatmix"
-        BINARY="${TMP_DIR}/arctis_chatmix"
-        return
-      fi
-      echo "[warn] Prebuilt release download failed; falling back to source build..." >&2
-    fi
-
-    if command -v git >/dev/null 2>&1 && command -v cargo >/dev/null 2>&1; then
-      echo "Cloning shallow repository and building with cargo..."
-      git clone --depth 1 "https://github.com/${REPO}.git" "${TMP_DIR}/repo"
-      (cd "${TMP_DIR}/repo" && cargo build --release)
-      BINARY="${TMP_DIR}/repo/target/release/arctis_chatmix"
-    else
-      echo "Could not download prebuilt binary and git/cargo are not available." >&2
-      exit 2
-    fi
+    fetch_remote_binary
   fi
 }
 
@@ -294,7 +317,11 @@ UNIT
 }
 
 run_install() {
-  echo "== arctis_chatmix installer =="
+  if [[ "$UPDATE_MODE" == "yes" ]]; then
+    echo "== arctis_chatmix updater =="
+  else
+    echo "== arctis_chatmix installer =="
+  fi
   resolve_binary
   if [[ "$SYSTEM_MODE" == "yes" ]]; then
     install_system

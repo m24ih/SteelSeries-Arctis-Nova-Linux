@@ -15,6 +15,12 @@ Lightweight Linux daemon and hardware controller for the **SteelSeries Arctis No
 curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash
 ```
 
+To update:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash -s -- --update
+```
+
 To uninstall:
 
 ```bash
@@ -44,7 +50,7 @@ cd SteelSeries-Arctis-Nova-Linux
 ./install.sh
 ```
 
-Options: `./install.sh --system` (system-wide service), `./install.sh --binary PATH`, `./install.sh --uninstall`.
+Options: `./install.sh --system` (system-wide service), `./install.sh --update` (latest release binary), `./install.sh --binary PATH`, `./install.sh --uninstall`.
 
 Open the dashboard at **`http://127.0.0.1:3927`**.
 
