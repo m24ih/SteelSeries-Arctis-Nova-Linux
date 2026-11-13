@@ -296,6 +296,18 @@ pub(crate) fn parse_sinks_output(output: &str) -> Vec<AudioSinkInfo> {
     sinks
 }
 
+/// Returns `true` if `binary` is a generic runtime wrapper (e.g. `electron`, `python3`, `java`)
+/// rather than an application-specific executable, so `application.name` should be preferred as `app_key`.
+fn is_generic_wrapper_binary(binary: &str) -> bool {
+    let lower = binary.trim().to_ascii_lowercase();
+    lower == "electron"
+        || lower.starts_with("electron")
+        || matches!(
+            lower.as_str(),
+            "node" | "nodejs" | "python" | "python3" | "java" | "javaw" | "wine64-preloader" | "flatpak-session-helper"
+        )
+}
+
 /// Parses `pactl list sink-inputs` output into structured `SinkInputInfo` records.
 pub(crate) fn parse_sink_inputs_output(
     output: &str,
@@ -307,10 +319,12 @@ pub(crate) fn parse_sink_inputs_output(
 
     let finalize = |mut s: SinkInputInfo| -> SinkInputInfo {
         if s.app_key.is_empty() {
-            s.app_key = if !s.app_binary.is_empty() {
+            s.app_key = if !s.app_binary.is_empty() && !is_generic_wrapper_binary(&s.app_binary) {
                 s.app_binary.clone()
             } else if !s.app_name.is_empty() {
                 s.app_name.clone()
+            } else if !s.app_binary.is_empty() {
+                s.app_binary.clone()
             } else {
                 format!("stream-{}", s.index)
             };
@@ -646,5 +660,27 @@ Sink Input #125
         assert_eq!(streams[1].sink_name, "Arctis_Chat");
         assert_eq!(streams[1].app_key, "Discord");
         assert!(streams[1].corked);
+    }
+
+    #[test]
+    fn test_generic_wrapper_binary_uses_app_name_as_app_key() {
+        let mut sink_map = HashMap::new();
+        sink_map.insert(89, "Arctis_Chat".to_string());
+
+        let inputs_raw = "\
+Sink Input #1993
+\tDriver: PipeWire
+\tSink: 89
+\tCorked: no
+\tProperties:
+\t\tapplication.name = \"vesktop\"
+\t\tapplication.process.binary = \"electron\"
+\t\tmedia.name = \"Playback\"
+";
+        let streams = parse_sink_inputs_output(inputs_raw, &sink_map);
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0].app_binary, "electron");
+        assert_eq!(streams[0].app_name, "vesktop");
+        assert_eq!(streams[0].app_key, "vesktop");
     }
 }

@@ -840,7 +840,10 @@ pre#raw-telemetry-json {
 
     <!-- Minimalist Tabs -->
     <nav class="nav-tabs">
-      <button type="button" class="tab-btn active" data-tab="tab-eq" onclick="switchTab('tab-eq')" data-i18n="tab_eq">
+      <button type="button" class="tab-btn active" data-tab="tab-routing" onclick="switchTab('tab-routing')" data-i18n="tab_routing">
+        Ses Dağıtımı
+      </button>
+      <button type="button" class="tab-btn" data-tab="tab-eq" onclick="switchTab('tab-eq')" data-i18n="tab_eq">
         10-Bant Parametrik EQ
       </button>
       <button type="button" class="tab-btn" data-tab="tab-hardware" onclick="switchTab('tab-hardware')" data-i18n="tab_hw">
@@ -848,9 +851,6 @@ pre#raw-telemetry-json {
       </button>
       <button type="button" class="tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')" data-i18n="tab_telem">
         Canlı Telemetri
-      </button>
-      <button type="button" class="tab-btn" data-tab="tab-routing" onclick="switchTab('tab-routing')" data-i18n="tab_routing">
-        Ses Dağıtımı
       </button>
     </nav>
 
@@ -887,7 +887,7 @@ pre#raw-telemetry-json {
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- TAB 1: 10-Band Parametric EQ Studio                -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <section id="tab-eq" class="panel active">
+  <section id="tab-eq" class="panel">
     <!-- Channel Bar -->
     <div class="eq-toolbar">
       <div class="channel-pills">
@@ -1155,7 +1155,7 @@ pre#raw-telemetry-json {
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- TAB 4: App Audio Routing (Sonar-style)               -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <section id="tab-routing" class="panel">
+  <section id="tab-routing" class="panel active">
     <div class="routing-toolbar">
       <div>
         <div style="font-weight:600; font-size:1rem;" data-i18n="routing_title">Uygulama Ses Dağıtımı</div>
@@ -2297,6 +2297,7 @@ pre#raw-telemetry-json {
     connectSse();
     startPolling();
     setRoutingMode(routingMode);
+    refreshStreams(false);
     if (routingPollTimer) clearInterval(routingPollTimer);
     routingPollTimer = setInterval(() => {
       const tab = document.getElementById('tab-routing');
