@@ -12,6 +12,20 @@ This repository contains:
 
 ---
 
+## Quick Install (No Clone Required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash
+```
+
+To uninstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash -s -- --uninstall
+```
+
+---
+
 ## Web Companion Screenshots
 
 ### App Audio Routing (Sonar-Style)
@@ -195,18 +209,6 @@ arctis_chatmix --apply-config
 ---
 
 ## Installation
-
-### One-Line Quick Install (No Clone Required)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash
-```
-
-To uninstall:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash -s -- --uninstall
-```
 
 ### From Source / Cloned Repo
 
