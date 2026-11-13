@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Technical Reference & Troubleshooting
+    url: https://github.com/m24ih/SteelSeries-Arctis-Nova-Linux/blob/master/docs/TECHNICAL.md
+    about: Supported USB PIDs, CLI flags, udev setup, and common troubleshooting steps

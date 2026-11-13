@@ -50,6 +50,14 @@ Open the dashboard at **`http://127.0.0.1:3927`**.
 
 ---
 
+## Notes & Support
+
+- **Hardware Verification**: All 23 Arctis Nova 7 RX/TX USB Product IDs are implemented in code and `udev` rules; live hardware verification was performed on **Arctis Nova 7 Gen 2 (`0x22a1`)**. Community testing and feedback for other variants are very welcome!
+- **Arch Linux (AUR)**: Packaging files are included under [`aur/`](aur/), however official AUR publication is currently unavailable because new AUR account registration is suspended.
+- **Bug Reports & Compatibility**: Found an issue or tested another headset variant? **[Report a Bug or Hardware Compatibility Issue](https://github.com/m24ih/SteelSeries-Arctis-Nova-Linux/issues/new/choose)**.
+
+---
+
 ## Documentation & Technical Reference
 
 For supported USB Product IDs (all 23 RX/TX models), HID/PipeWire architecture, `config.toml` layout, CLI flags, manual `udev` setup, and troubleshooting, see:

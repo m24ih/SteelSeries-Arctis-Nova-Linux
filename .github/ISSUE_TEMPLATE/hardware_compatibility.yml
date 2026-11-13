@@ -1,0 +1,35 @@
+name: Hardware Compatibility Report
+description: Report test results or missing support for an Arctis Nova 7 variant / USB PID
+title: "[Hardware]: "
+labels: ["hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Live verification was performed on **Arctis Nova 7 Gen 2 (`0x22a1`)**. Help us verify the remaining 22 USB Product IDs or add new ones!
+
+  - type: input
+    id: usb_pid
+    attributes:
+      label: USB Vendor & Product ID (`lsusb -d 1038:`)
+      placeholder: "1038:2206"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Which features work on your headset?
+      options:
+        - label: PipeWire `Arctis_Game` / `Arctis_Chat` sinks & ChatMix dial (`0x45`)
+        - label: Battery percentage & charging status (`arctis_chatmix --status`)
+        - label: 10-Band Parametric EQ (`0x33`)
+        - label: Sidetone / Mic Gain / Volume Limiter / Flash Save (`0x09`)
+        - label: Sonar-style App Routing in Web UI
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Details & `arctis_chatmix --status` Output
+      description: Share any quirks, wrong battery scaling, or HID errors from logs
+      render: shell

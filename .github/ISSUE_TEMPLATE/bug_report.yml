@@ -1,0 +1,42 @@
+name: Bug Report
+description: Report a bug, crash, PipeWire routing issue, or hardware control problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Note that while 23 USB PIDs are supported in code, live hardware verification was performed on **Arctis Nova 7 Gen 2 (`0x22a1`)**, so your hardware details below are very helpful.
+
+  - type: input
+    id: headset_model
+    attributes:
+      label: Headset Model & USB Product ID
+      description: Run `lsusb -d 1038:` and paste the model / PID (e.g. `1038:22a1 Arctis Nova 7 Gen 2`)
+      placeholder: "1038:2202 SteelSeries Arctis Nova 7"
+    validations:
+      required: true
+
+  - type: input
+    id: system_info
+    attributes:
+      label: Linux Distro & Audio Stack
+      description: Distro, desktop environment, and PipeWire version (`pw-cli --version` or `pactl --version`)
+      placeholder: "Arch / CachyOS, KDE Plasma 6, PipeWire 1.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and steps to reproduce it
+    validations:
+      required: true
+
+  - type: textarea
+    id: status_output
+    attributes:
+      label: "`arctis_chatmix --status` & Logs"
+      description: Paste output of `arctis_chatmix --status` and `journalctl --user -u arctis_chatmix.service -n 50 --no-pager`
+      render: shell
