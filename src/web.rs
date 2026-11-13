@@ -218,6 +218,7 @@ fn handle_client(
         ("POST", "/api/streams/route") | ("PUT", "/api/streams/route") => {
             handle_post_streams_route(&mut stream, &worker, &body)
         }
+        ("GET", "/api/icon") => handle_get_icon(&mut stream, raw_target),
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
         ("GET", "/favicon.ico") | ("GET", "/favicon.svg") => write_svg_response(&mut stream, 200, FAVICON_SVG),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
@@ -1103,6 +1104,116 @@ fn write_error_response(stream: &mut TcpStream, status: u16, message: &str) -> R
     write_json_response(stream, status, &json)
 }
 
+const FALLBACK_APP_ICON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>"##;
+
+fn sanitize_icon_name(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.len() > 128 || trimmed.contains("..") {
+        return None;
+    }
+    if trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    {
+        Some(trimmed.to_string())
+    } else {
+        None
+    }
+}
+
+fn resolve_icon_file(name: &str) -> Option<(std::path::PathBuf, &'static str)> {
+    let mut candidates = vec![name.to_string()];
+    let lower = name.to_ascii_lowercase();
+    if lower != name {
+        candidates.push(lower.clone());
+    }
+    if let Some(stripped) = lower.strip_suffix("-bin") {
+        if !stripped.is_empty() {
+            candidates.push(stripped.to_string());
+        }
+    }
+
+    let mut bases: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+        let p = std::path::PathBuf::from(xdg_data.trim()).join("icons/hicolor");
+        bases.push(p);
+    } else if let Ok(home) = std::env::var("HOME") {
+        let h = std::path::PathBuf::from(home.trim());
+        bases.push(h.join(".local/share/icons/hicolor"));
+        bases.push(h.join(".local/share/flatpak/exports/share/icons/hicolor"));
+    }
+    bases.push(std::path::PathBuf::from("/usr/share/icons/hicolor"));
+    bases.push(std::path::PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor"));
+
+    let subdirs = [
+        "scalable/apps",
+        "128x128/apps",
+        "64x64/apps",
+        "48x48/apps",
+        "256x256/apps",
+        "32x32/apps",
+    ];
+    let exts = [("svg", "image/svg+xml; charset=utf-8"), ("png", "image/png")];
+
+    for cand in &candidates {
+        for base in &bases {
+            for sub in &subdirs {
+                for (ext, mime) in &exts {
+                    let path = base.join(sub).join(format!("{}.{}", cand, ext));
+                    if path.is_file() {
+                        return Some((path, *mime));
+                    }
+                }
+            }
+        }
+        for (ext, mime) in &exts {
+            let pix = std::path::PathBuf::from("/usr/share/pixmaps").join(format!("{}.{}", cand, ext));
+            if pix.is_file() {
+                return Some((pix, *mime));
+            }
+        }
+    }
+    None
+}
+
+fn handle_get_icon(stream: &mut TcpStream, raw_target: &str) -> Result<()> {
+    if let Some(raw_name) = extract_query_param(raw_target, "name") {
+        if let Some(safe_name) = sanitize_icon_name(&raw_name) {
+            if let Some((path, mime)) = resolve_icon_file(&safe_name) {
+                if let Ok(bytes) = std::fs::read(&path) {
+                    return write_binary_response(stream, 200, mime, &bytes);
+                }
+            }
+        }
+    }
+    write_svg_response(stream, 200, FALLBACK_APP_ICON_SVG)
+}
+
+fn write_binary_response(
+    stream: &mut TcpStream,
+    status: u16,
+    content_type: &str,
+    bytes: &[u8],
+) -> Result<()> {
+    let header = format!(
+        concat!(
+            "HTTP/1.1 {} {}\r\n",
+            "Content-Type: {}\r\n",
+            "Cache-Control: public, max-age=86400\r\n",
+            "Content-Length: {}\r\n",
+            "Connection: close\r\n\r\n"
+        ),
+        status,
+        status_reason(status),
+        content_type,
+        bytes.len()
+    );
+    stream.write_all(header.as_bytes())?;
+    stream.write_all(bytes)?;
+    stream.flush()?;
+    Ok(())
+}
+
 fn write_svg_response(stream: &mut TcpStream, status: u16, svg_body: &str) -> Result<()> {
     let bytes = svg_body.as_bytes();
     let header = format!(
@@ -1137,6 +1248,15 @@ mod tests {
         assert_eq!(extract_query_param("/api/eq?target=mic&other=1", "target"), Some("mic".to_string()));
         assert_eq!(extract_query_param("/api/eq?other=1&channel=24g", "channel"), Some("24g".to_string()));
         assert_eq!(extract_query_param("/api/eq", "channel"), None);
+    }
+
+    #[test]
+    fn test_sanitize_icon_name() {
+        assert_eq!(sanitize_icon_name("vivaldi"), Some("vivaldi".to_string()));
+        assert_eq!(sanitize_icon_name("com.discordapp.Discord"), Some("com.discordapp.Discord".to_string()));
+        assert_eq!(sanitize_icon_name("../etc/passwd"), None);
+        assert_eq!(sanitize_icon_name("foo/bar"), None);
+        assert_eq!(sanitize_icon_name(""), None);
     }
 
     #[test]

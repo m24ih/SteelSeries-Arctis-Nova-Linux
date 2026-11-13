@@ -729,12 +729,28 @@ pre#raw-telemetry-json {
   border-radius: var(--radius-md);
   padding: 0.85rem 1rem;
 }
+.routing-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 180px;
+  flex: 1 1 220px;
+}
+.routing-app-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--bg-input);
+  padding: 2px;
+}
 .routing-row-info {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  min-width: 180px;
-  flex: 1 1 220px;
+  min-width: 0;
+  flex: 1;
 }
 .routing-app-name {
   font-weight: 600;
@@ -2189,18 +2205,22 @@ pre#raw-telemetry-json {
       activeList.innerHTML = `<div class="routing-empty">${escHtml(dict.routing_empty_streams)}</div>`;
     } else if (routingMode === 'basic') {
       const groups = {};
+      const iconByKey = {};
       for (const st of streams) {
         const key = st.app_key || st.app_name;
+        if (st.icon_name && !iconByKey[key]) iconByKey[key] = st.icon_name;
         if (!groups[key]) {
           groups[key] = {
             app_key: key,
             app_name: st.app_name || key,
+            icon_name: st.icon_name || key,
             count: 0,
             sinks: new Set(),
             titles: []
           };
         }
         groups[key].count += 1;
+        if (st.icon_name && !groups[key].icon_name) groups[key].icon_name = st.icon_name;
         if (st.sink_name) groups[key].sinks.add(st.sink_name);
         const detail = st.media_title || st.media_name;
         if (detail && !groups[key].titles.includes(detail)) groups[key].titles.push(detail);
@@ -2213,6 +2233,7 @@ pre#raw-telemetry-json {
         const countBadge = g.count > 1 ? `<span class="routing-badge">${g.count}${escHtml(dict.routing_streams_count)}</span>` : '';
         const ruleBadge = ruleSink ? `<span class="routing-badge">${escHtml(sinkDescMap[ruleSink] || ruleSink)}</span>` : '';
         const subText = g.titles.length > 0 ? g.titles.join(' · ') : g.app_key;
+        const iconUrl = `/api/icon?name=${encodeURIComponent(g.icon_name || g.app_key)}`;
         const controls = buildSinkControls(currentSink, ruleSink, target =>
           `routeApp('${escHtml(g.app_key).replace(/'/g, "\\'")}', '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}')`
         );
@@ -2221,9 +2242,12 @@ pre#raw-telemetry-json {
           : '';
         return `
           <div class="routing-row">
-            <div class="routing-row-info">
-              <div class="routing-app-name">${escHtml(g.app_name)} ${countBadge} ${ruleBadge}</div>
-              <div class="routing-sub">${escHtml(subText)}</div>
+            <div class="routing-row-main">
+              <img class="routing-app-icon" src="${iconUrl}" alt="" loading="lazy">
+              <div class="routing-row-info">
+                <div class="routing-app-name">${escHtml(g.app_name)} ${countBadge} ${ruleBadge}</div>
+                <div class="routing-sub">${escHtml(subText)}</div>
+              </div>
             </div>
             <div class="routing-controls">${controls}${clearBtn}</div>
           </div>`;
@@ -2233,6 +2257,7 @@ pre#raw-telemetry-json {
         const detail = st.media_title || st.media_name || st.app_key;
         const streamBadge = `<span class="routing-badge">${escHtml(dict.routing_stream_prefix)}${st.index}</span>`;
         const sinkBadge = st.sink_name ? `<span class="routing-badge">${escHtml(sinkDescMap[st.sink_name] || st.sink_name)}</span>` : '';
+        const iconUrl = `/api/icon?name=${encodeURIComponent(st.icon_name || st.app_key || st.app_name)}`;
         const controls = buildSinkControls(st.sink_name, '', target =>
           `routeStream(${st.index}, '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}', '${escHtml(st.app_key).replace(/'/g, "\\'")}', false)`
         );
@@ -2241,9 +2266,12 @@ pre#raw-telemetry-json {
           : '';
         return `
           <div class="routing-row">
-            <div class="routing-row-info">
-              <div class="routing-app-name">${escHtml(st.app_name)} ${streamBadge} ${sinkBadge}</div>
-              <div class="routing-sub">${escHtml(detail)}</div>
+            <div class="routing-row-main">
+              <img class="routing-app-icon" src="${iconUrl}" alt="" loading="lazy">
+              <div class="routing-row-info">
+                <div class="routing-app-name">${escHtml(st.app_name)} ${streamBadge} ${sinkBadge}</div>
+                <div class="routing-sub">${escHtml(detail)}</div>
+              </div>
             </div>
             <div class="routing-controls">${controls}${saveBtn}</div>
           </div>`;
@@ -2255,13 +2283,18 @@ pre#raw-telemetry-json {
       rulesList.innerHTML = `<div class="routing-empty">${escHtml(dict.routing_empty_rules)}</div>`;
     } else {
       rulesList.innerHTML = ruleEntries.map(([appKey, sinkName]) => {
+        const matchedStream = streams.find(s => (s.app_key || s.app_name) === appKey);
+        const iconUrl = `/api/icon?name=${encodeURIComponent((matchedStream && matchedStream.icon_name) || appKey)}`;
         const controls = buildSinkControls(sinkName, sinkName, target =>
           `routeApp('${escHtml(appKey).replace(/'/g, "\\'")}', '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}')`
         );
         return `
           <div class="routing-row">
-            <div class="routing-row-info">
-              <div class="routing-app-name">${escHtml(appKey)} <span class="routing-badge">${escHtml(sinkDescMap[sinkName] || sinkName)}</span></div>
+            <div class="routing-row-main">
+              <img class="routing-app-icon" src="${iconUrl}" alt="" loading="lazy">
+              <div class="routing-row-info">
+                <div class="routing-app-name">${escHtml(appKey)} <span class="routing-badge">${escHtml(sinkDescMap[sinkName] || sinkName)}</span></div>
+              </div>
             </div>
             <div class="routing-controls">
               ${controls}
