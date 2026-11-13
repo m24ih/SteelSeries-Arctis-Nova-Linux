@@ -9,6 +9,16 @@ set -euo pipefail
 BINARY=""
 SYSTEM_MODE="no"
 UNINSTALL="no"
+REPO="m24ih/SteelSeries-Arctis-Nova-Linux"
+RELEASE_BIN_URL="https://github.com/${REPO}/releases/latest/download/arctis_chatmix"
+TMP_DIR=""
+
+cleanup() {
+  if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT
 
 print_help() {
   cat <<'USAGE'
@@ -64,7 +74,12 @@ run_privileged() {
   fi
 }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]:-}"
+if [[ -n "$SCRIPT_PATH" && -f "$SCRIPT_PATH" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+else
+  SCRIPT_DIR="$PWD"
+fi
 REAL_USER="${SUDO_USER:-$(id -un)}"
 REAL_HOME="$(getent passwd "$REAL_USER" 2>/dev/null | cut -d: -f6 || true)"
 [[ -z "$REAL_HOME" ]] && REAL_HOME="$HOME"
@@ -100,6 +115,17 @@ run_user_systemctl() {
   fi
 }
 
+download_file() {
+  local url="$1" dest="$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$url" -o "$dest"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$dest" "$url"
+  else
+    return 1
+  fi
+}
+
 resolve_binary() {
   if [[ -n "$BINARY" ]]; then
     if [[ ! -f "$BINARY" ]]; then
@@ -118,9 +144,28 @@ resolve_binary() {
     (cd "$SCRIPT_DIR" && cargo build --release)
     BINARY="${SCRIPT_DIR}/target/release/arctis_chatmix"
   else
-    echo "Binary not found (checked ./arctis_chatmix and target/release/arctis_chatmix)." >&2
-    echo "Build it first with 'cargo build --release' or pass --binary PATH." >&2
-    exit 2
+    TMP_DIR="$(mktemp -d)"
+    local arch
+    arch="$(uname -m)"
+    if [[ "$arch" == "x86_64" ]]; then
+      echo "Downloading latest prebuilt binary from GitHub Releases..."
+      if download_file "$RELEASE_BIN_URL" "${TMP_DIR}/arctis_chatmix"; then
+        chmod +x "${TMP_DIR}/arctis_chatmix"
+        BINARY="${TMP_DIR}/arctis_chatmix"
+        return
+      fi
+      echo "[warn] Prebuilt release download failed; falling back to source build..." >&2
+    fi
+
+    if command -v git >/dev/null 2>&1 && command -v cargo >/dev/null 2>&1; then
+      echo "Cloning shallow repository and building with cargo..."
+      git clone --depth 1 "https://github.com/${REPO}.git" "${TMP_DIR}/repo"
+      (cd "${TMP_DIR}/repo" && cargo build --release)
+      BINARY="${TMP_DIR}/repo/target/release/arctis_chatmix"
+    else
+      echo "Could not download prebuilt binary and git/cargo are not available." >&2
+      exit 2
+    fi
   fi
 }
 

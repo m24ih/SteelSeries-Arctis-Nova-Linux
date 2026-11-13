@@ -196,12 +196,24 @@ arctis_chatmix --apply-config
 
 ## Installation
 
-### Quick Start
+### One-Line Quick Install (No Clone Required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash
+```
+
+To uninstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/m24ih/SteelSeries-Arctis-Nova-Linux/master/install.sh | bash -s -- --uninstall
+```
+
+### From Source / Cloned Repo
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/m24ih/Arctis-Nova-7-Chatmix.git
-   cd Arctis-Nova-7-Chatmix
+   git clone https://github.com/m24ih/SteelSeries-Arctis-Nova-Linux.git
+   cd SteelSeries-Arctis-Nova-Linux
    ```
 
 2. Run the installer (builds `target/release/arctis_chatmix` automatically if needed, installs the user service & udev rules, and starts/restarts the daemon):
