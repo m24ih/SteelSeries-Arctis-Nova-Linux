@@ -672,6 +672,142 @@ pre#raw-telemetry-json {
   pointer-events: auto;
   transform: translateY(0);
 }
+
+/* ── App Routing (Sonar-style) ── */
+.routing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.routing-mode-group {
+  display: inline-flex;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.2rem;
+  gap: 0.2rem;
+}
+.routing-mode-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.routing-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.routing-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 1rem 0 0.6rem;
+}
+.routing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.routing-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+.routing-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 180px;
+  flex: 1 1 220px;
+}
+.routing-app-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.routing-badge {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.routing-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.routing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.routing-pill {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.routing-pill:hover {
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+.routing-pill.active-game {
+  background: rgba(255, 106, 0, 0.18);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.routing-pill.active-chat {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+.routing-select {
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.36rem 0.6rem;
+  font-size: 0.8rem;
+  max-width: 220px;
+}
+.routing-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+}
 </style>
 </head>
 <body>
@@ -702,6 +838,9 @@ pre#raw-telemetry-json {
       </button>
       <button type="button" class="tab-btn" data-tab="tab-telemetry" onclick="switchTab('tab-telemetry')" data-i18n="tab_telem">
         Canlı Telemetri
+      </button>
+      <button type="button" class="tab-btn" data-tab="tab-routing" onclick="switchTab('tab-routing')" data-i18n="tab_routing">
+        Ses Dağıtımı
       </button>
     </nav>
 
@@ -1002,6 +1141,33 @@ pre#raw-telemetry-json {
       </div>
     </div>
   </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- TAB 4: App Audio Routing (Sonar-style)               -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="tab-routing" class="panel">
+    <div class="routing-toolbar">
+      <div>
+        <div style="font-weight:600; font-size:1rem;" data-i18n="routing_title">Uygulama Ses Dağıtımı</div>
+        <div style="font-size:0.82rem; color:var(--text-muted);" data-i18n="routing_desc">
+          Aktif uygulamaları Game, Chat veya diğer çıkışlara yönlendirin. Yapılan seçimler otomatik kaydedilir.
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+        <div class="routing-mode-group">
+          <button type="button" class="routing-mode-btn active" id="btn-routing-basic" onclick="setRoutingMode('basic')" data-i18n="routing_mode_basic">Basit</button>
+          <button type="button" class="routing-mode-btn" id="btn-routing-advanced" onclick="setRoutingMode('advanced')" data-i18n="routing_mode_adv">Gelişmiş</button>
+        </div>
+        <button type="button" class="btn-secondary" onclick="refreshStreams(true)" data-i18n="routing_refresh">Yenile</button>
+      </div>
+    </div>
+
+    <div class="routing-section-title" id="routing-active-heading" data-i18n="routing_active_apps">Aktif Uygulamalar</div>
+    <div id="routing-active-list" class="routing-list"></div>
+
+    <div class="routing-section-title" id="routing-rules-heading" data-i18n="routing_saved_rules">Kayıtlı Kurallar</div>
+    <div id="routing-rules-list" class="routing-list"></div>
+  </section>
 </main>
 
 <div class="toast-notice" id="toast">
@@ -1021,6 +1187,24 @@ pre#raw-telemetry-json {
       tab_eq: '10-Bant Parametrik EQ',
       tab_hw: 'Donanım Kontrolleri',
       tab_telem: 'Canlı Telemetri',
+      tab_routing: 'Ses Dağıtımı',
+      routing_title: 'Uygulama Ses Dağıtımı',
+      routing_desc: 'Aktif uygulamaları Game, Chat veya diğer çıkışlara yönlendirin. Yapılan seçimler otomatik kaydedilir.',
+      routing_mode_basic: 'Basit',
+      routing_mode_adv: 'Gelişmiş',
+      routing_refresh: 'Yenile',
+      routing_active_apps: 'Aktif Uygulamalar',
+      routing_active_streams: 'Aktif Ses Akışları',
+      routing_saved_rules: 'Kayıtlı Kurallar',
+      routing_empty_streams: 'Şu anda aktif ses akışı yok. Bir tarayıcı, oyun veya medya oynatıcı başlattığınızda burada görünecektir.',
+      routing_empty_rules: 'Henüz kayıtlı uygulama kuralı yok.',
+      routing_streams_count: ' akış',
+      routing_clear_rule: 'Kuralı Sil',
+      routing_save_rule: 'Kural Kaydet',
+      routing_saved_toast: 'Yönlendirme güncellendi ve kaydedildi',
+      routing_stream_moved_toast: 'Akış taşındı',
+      routing_rule_cleared_toast: 'Kural silindi',
+      routing_other_sink: 'Diğer Çıkış...',
       rf_waiting: 'RF Bekleniyor',
       rf_connected: 'RF Bağlı',
       battery_label: 'Pil: %',
@@ -1092,6 +1276,24 @@ pre#raw-telemetry-json {
       tab_eq: '10-Band Parametric EQ',
       tab_hw: 'Hardware Controls',
       tab_telem: 'Live Telemetry',
+      tab_routing: 'App Routing',
+      routing_title: 'Application Audio Routing',
+      routing_desc: 'Route active applications to Game, Chat, or other outputs. Selections are saved automatically.',
+      routing_mode_basic: 'Basic',
+      routing_mode_adv: 'Advanced',
+      routing_refresh: 'Refresh',
+      routing_active_apps: 'Active Applications',
+      routing_active_streams: 'Active Audio Streams',
+      routing_saved_rules: 'Saved Rules',
+      routing_empty_streams: 'No active audio streams right now. Start a browser, game, or media player to see it here.',
+      routing_empty_rules: 'No saved application rules yet.',
+      routing_streams_count: ' streams',
+      routing_clear_rule: 'Clear Rule',
+      routing_save_rule: 'Save Rule',
+      routing_saved_toast: 'Routing updated and saved',
+      routing_stream_moved_toast: 'Stream moved',
+      routing_rule_cleared_toast: 'Rule cleared',
+      routing_other_sink: 'Other Output...',
       rf_waiting: 'Waiting for RF',
       rf_connected: 'RF Connected',
       battery_label: 'Battery: %',
@@ -1281,6 +1483,8 @@ pre#raw-telemetry-json {
 
     if (tabId === 'tab-eq') {
       setTimeout(resizeAndDrawCurve, 20);
+    } else if (tabId === 'tab-routing') {
+      refreshStreams(false);
     }
   };
 
@@ -1834,6 +2038,217 @@ pre#raw-telemetry-json {
 
   window.addEventListener('resize', resizeAndDrawCurve);
 
+  // ── App Routing (Sonar-style Basic / Advanced) ──
+  let routingMode = localStorage.getItem('routing_view_mode') || 'basic';
+  let lastRoutingData = { sinks: [], streams: [], rules: {} };
+  let routingPollTimer = null;
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  window.setRoutingMode = function(mode) {
+    routingMode = mode === 'advanced' ? 'advanced' : 'basic';
+    localStorage.setItem('routing_view_mode', routingMode);
+    const btnBasic = document.getElementById('btn-routing-basic');
+    const btnAdv = document.getElementById('btn-routing-advanced');
+    if (btnBasic) btnBasic.classList.toggle('active', routingMode === 'basic');
+    if (btnAdv) btnAdv.classList.toggle('active', routingMode === 'advanced');
+    renderRoutingView();
+  };
+
+  window.refreshStreams = async function(showErr) {
+    try {
+      const res = await fetch('/api/streams');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok) {
+        lastRoutingData = data;
+        renderRoutingView();
+      }
+    } catch (e) {
+      if (showErr) showToast(String(e));
+    }
+  };
+
+  window.routeApp = async function(appKey, sinkName) {
+    try {
+      const res = await fetch('/api/streams/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'app', app_key: appKey, sink: sinkName, save: true })
+      });
+      if (res.ok) {
+        const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+        showToast(sinkName ? dict.routing_saved_toast : dict.routing_rule_cleared_toast);
+        await refreshStreams(false);
+      }
+    } catch (e) {
+      showToast(String(e));
+    }
+  };
+
+  window.routeStream = async function(index, sinkName, appKey, saveRule) {
+    try {
+      const res = await fetch('/api/streams/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'stream',
+          index: Number(index),
+          sink: sinkName,
+          app_key: appKey || '',
+          save: Boolean(saveRule)
+        })
+      });
+      if (res.ok) {
+        const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+        showToast(saveRule ? dict.routing_saved_toast : dict.routing_stream_moved_toast);
+        await refreshStreams(false);
+      }
+    } catch (e) {
+      showToast(String(e));
+    }
+  };
+
+  function buildSinkControls(currentSink, rulesSink, onSelectExpr) {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+    const sinks = lastRoutingData.sinks || [];
+    const gameSink = sinks.find(s => s.category === 'game') || { name: 'Arctis_Game', description: 'Game' };
+    const chatSink = sinks.find(s => s.category === 'chat') || { name: 'Arctis_Chat', description: 'Chat' };
+    const activeSink = currentSink || rulesSink || '';
+    const isGame = activeSink === gameSink.name;
+    const isChat = activeSink === chatSink.name;
+    const otherSinks = sinks.filter(s => s.name !== gameSink.name && s.name !== chatSink.name);
+
+    let html = `<button type="button" class="routing-pill ${isGame ? 'active-game' : ''}" onclick="${onSelectExpr(gameSink.name)}">Game</button>`;
+    html += `<button type="button" class="routing-pill ${isChat ? 'active-chat' : ''}" onclick="${onSelectExpr(chatSink.name)}">Chat</button>`;
+
+    if (otherSinks.length > 0) {
+      html += `<select class="routing-select" onchange="if(this.value){${onSelectExpr('__VAL__').replace("'__VAL__'", 'this.value')}}">`;
+      html += `<option value="">${escHtml(dict.routing_other_sink)}</option>`;
+      for (const os of otherSinks) {
+        const sel = activeSink === os.name ? 'selected' : '';
+        html += `<option value="${escHtml(os.name)}" ${sel}>${escHtml(os.description || os.name)}</option>`;
+      }
+      html += `</select>`;
+    }
+    return html;
+  }
+
+  function renderRoutingView() {
+    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.tr;
+    const activeList = document.getElementById('routing-active-list');
+    const rulesList = document.getElementById('routing-rules-list');
+    const activeHeading = document.getElementById('routing-active-heading');
+    if (!activeList || !rulesList) return;
+
+    const btnBasic = document.getElementById('btn-routing-basic');
+    const btnAdv = document.getElementById('btn-routing-advanced');
+    if (btnBasic) btnBasic.classList.toggle('active', routingMode === 'basic');
+    if (btnAdv) btnAdv.classList.toggle('active', routingMode === 'advanced');
+
+    if (activeHeading) {
+      activeHeading.textContent = routingMode === 'advanced' ? dict.routing_active_streams : dict.routing_active_apps;
+    }
+
+    const streams = lastRoutingData.streams || [];
+    const rules = lastRoutingData.rules || {};
+    const sinks = lastRoutingData.sinks || [];
+    const sinkDescMap = {};
+    for (const s of sinks) sinkDescMap[s.name] = s.description || s.name;
+
+    if (streams.length === 0) {
+      activeList.innerHTML = `<div class="routing-empty">${escHtml(dict.routing_empty_streams)}</div>`;
+    } else if (routingMode === 'basic') {
+      const groups = {};
+      for (const st of streams) {
+        const key = st.app_key || st.app_name;
+        if (!groups[key]) {
+          groups[key] = {
+            app_key: key,
+            app_name: st.app_name || key,
+            count: 0,
+            sinks: new Set(),
+            titles: []
+          };
+        }
+        groups[key].count += 1;
+        if (st.sink_name) groups[key].sinks.add(st.sink_name);
+        const detail = st.media_title || st.media_name;
+        if (detail && !groups[key].titles.includes(detail)) groups[key].titles.push(detail);
+      }
+
+      activeList.innerHTML = Object.values(groups).map(g => {
+        const sinkArr = Array.from(g.sinks);
+        const currentSink = sinkArr.length === 1 ? sinkArr[0] : '';
+        const ruleSink = rules[g.app_key] || '';
+        const countBadge = g.count > 1 ? `<span class="routing-badge">${g.count}${escHtml(dict.routing_streams_count)}</span>` : '';
+        const ruleBadge = ruleSink ? `<span class="routing-badge">${escHtml(sinkDescMap[ruleSink] || ruleSink)}</span>` : '';
+        const subText = g.titles.length > 0 ? g.titles.join(' · ') : g.app_key;
+        const controls = buildSinkControls(currentSink, ruleSink, target =>
+          `routeApp('${escHtml(g.app_key).replace(/'/g, "\\'")}', '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}')`
+        );
+        const clearBtn = ruleSink
+          ? `<button type="button" class="routing-pill" onclick="routeApp('${escHtml(g.app_key).replace(/'/g, "\\'")}', '')">${escHtml(dict.routing_clear_rule)}</button>`
+          : '';
+        return `
+          <div class="routing-row">
+            <div class="routing-row-info">
+              <div class="routing-app-name">${escHtml(g.app_name)} ${countBadge} ${ruleBadge}</div>
+              <div class="routing-sub">${escHtml(subText)}</div>
+            </div>
+            <div class="routing-controls">${controls}${clearBtn}</div>
+          </div>`;
+      }).join('');
+    } else {
+      activeList.innerHTML = streams.map(st => {
+        const detail = st.media_title || st.media_name || st.app_key;
+        const streamBadge = `<span class="routing-badge">#${st.index}</span>`;
+        const sinkBadge = st.sink_name ? `<span class="routing-badge">${escHtml(sinkDescMap[st.sink_name] || st.sink_name)}</span>` : '';
+        const controls = buildSinkControls(st.sink_name, '', target =>
+          `routeStream(${st.index}, '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}', '${escHtml(st.app_key).replace(/'/g, "\\'")}', false)`
+        );
+        const saveBtn = st.sink_name
+          ? `<button type="button" class="routing-pill" onclick="routeStream(${st.index}, '${escHtml(st.sink_name).replace(/'/g, "\\'")}', '${escHtml(st.app_key).replace(/'/g, "\\'")}', true)">${escHtml(dict.routing_save_rule)}</button>`
+          : '';
+        return `
+          <div class="routing-row">
+            <div class="routing-row-info">
+              <div class="routing-app-name">${escHtml(st.app_name)} ${streamBadge} ${sinkBadge}</div>
+              <div class="routing-sub">${escHtml(detail)}</div>
+            </div>
+            <div class="routing-controls">${controls}${saveBtn}</div>
+          </div>`;
+      }).join('');
+    }
+
+    const ruleEntries = Object.entries(rules);
+    if (ruleEntries.length === 0) {
+      rulesList.innerHTML = `<div class="routing-empty">${escHtml(dict.routing_empty_rules)}</div>`;
+    } else {
+      rulesList.innerHTML = ruleEntries.map(([appKey, sinkName]) => {
+        const controls = buildSinkControls(sinkName, sinkName, target =>
+          `routeApp('${escHtml(appKey).replace(/'/g, "\\'")}', '${target === '__VAL__' ? '__VAL__' : escHtml(target).replace(/'/g, "\\'")}')`
+        );
+        return `
+          <div class="routing-row">
+            <div class="routing-row-info">
+              <div class="routing-app-name">${escHtml(appKey)} <span class="routing-badge">${escHtml(sinkDescMap[sinkName] || sinkName)}</span></div>
+            </div>
+            <div class="routing-controls">
+              ${controls}
+              <button type="button" class="routing-pill" onclick="routeApp('${escHtml(appKey).replace(/'/g, "\\'")}', '')">${escHtml(dict.routing_clear_rule)}</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
   async function init() {
     initPresetChips();
     loadChannelSliders();
@@ -1858,6 +2273,14 @@ pre#raw-telemetry-json {
 
     connectSse();
     startPolling();
+    setRoutingMode(routingMode);
+    if (routingPollTimer) clearInterval(routingPollTimer);
+    routingPollTimer = setInterval(() => {
+      const tab = document.getElementById('tab-routing');
+      if (tab && tab.classList.contains('active')) {
+        refreshStreams(false);
+      }
+    }, 2500);
   }
 
   window.addEventListener('DOMContentLoaded', init);

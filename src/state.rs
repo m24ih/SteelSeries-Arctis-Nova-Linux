@@ -78,6 +78,12 @@ pub enum DeviceCommand {
     RequestStatus {
         reply: Sender<Result<()>>,
     },
+    /// Persist or remove a per-application PipeWire sink routing rule in `config.toml`.
+    SetAppRoutingRule {
+        app_key: String,
+        sink_name: Option<String>,
+        reply: Sender<Result<()>>,
+    },
 }
 
 /// Partial update payload for `/api/settings`.
@@ -798,6 +804,36 @@ impl DeviceWorker {
                     )
                 })();
                 self.handle.broadcast_state("telemetry");
+                let _ = reply.send(res);
+            }
+            DeviceCommand::SetAppRoutingRule {
+                app_key,
+                sink_name,
+                reply,
+            } => {
+                let res = (|| -> Result<()> {
+                    let mut st = self
+                        .handle
+                        .state
+                        .write()
+                        .map_err(|_| anyhow::anyhow!("State RwLock poisoned"))?;
+                    let key = app_key.trim().to_string();
+                    if key.is_empty() {
+                        anyhow::bail!("app_key cannot be empty");
+                    }
+                    match sink_name {
+                        Some(sink) if !sink.trim().is_empty() => {
+                            st.config.app_routing.insert(key, sink.trim().to_string());
+                        }
+                        _ => {
+                            st.config.app_routing.remove(&key);
+                        }
+                    }
+                    self.handle.config_manager.save_config(&st.config)?;
+                    st.touch();
+                    Ok(())
+                })();
+                self.handle.broadcast_state("routing");
                 let _ = reply.send(res);
             }
         }

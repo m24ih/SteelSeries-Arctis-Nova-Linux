@@ -1,6 +1,6 @@
 use crate::audio::{
-    create_virtual_sink, destroy_virtual_sinks, find_arctis_sink, get_default_sink,
-    link_sink_to_device, move_all_inputs_to, set_default_sink, set_sink_volume,
+    apply_saved_routing_rules, create_virtual_sink, destroy_virtual_sinks, find_arctis_sink,
+    get_default_sink, link_sink_to_device, move_all_inputs_to, set_default_sink, set_sink_volume,
 };
 use crate::config::{AppConfig, ConfigManager};
 use crate::device::{
@@ -610,6 +610,9 @@ impl ArctisController {
         let mut battery_tracker = BatteryNotificationTracker::default();
         let is_percentage_device = is_percentage_battery_device(product_id);
         let mut last_status_poll = Instant::now();
+        let mut last_routing_poll = Instant::now() - Duration::from_secs(2);
+        let mut auto_routed_streams: std::collections::HashMap<u32, String> =
+            std::collections::HashMap::new();
 
         if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
             let changed = telemetry.apply_event(&event);
@@ -629,6 +632,19 @@ impl ArctisController {
         while self.running.load(Ordering::SeqCst) {
             // 1. Drain any pending Web UI / API commands on this single USB owner thread
             self.worker.drain_commands(Some((handle, interface_num)));
+
+            if last_routing_poll.elapsed() >= Duration::from_secs(2) {
+                if let Ok(st) = self.worker_handle.state.read() {
+                    if !st.config.app_routing.is_empty() {
+                        let rules = st.config.app_routing.clone();
+                        drop(st);
+                        let _ = apply_saved_routing_rules(&rules, &mut auto_routed_streams);
+                    } else {
+                        auto_routed_streams.clear();
+                    }
+                }
+                last_routing_poll = Instant::now();
+            }
 
             let current_poll_secs = self
                 .worker_handle

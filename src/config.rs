@@ -13,6 +13,7 @@ use crate::eq::{
     MAX_EQ_GAIN_DB, MIN_EQ_GAIN_DB,
 };
 use anyhow::{Context, Result};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -64,6 +65,7 @@ pub struct AppConfig {
     pub tray_enabled: bool,
     pub language: String,
     pub hardware: HardwareConfig,
+    pub app_routing: BTreeMap<String, String>,
 }
 
 impl Default for AppConfig {
@@ -81,6 +83,7 @@ impl Default for AppConfig {
             tray_enabled: true,
             language: "tr".to_string(),
             hardware: HardwareConfig::default(),
+            app_routing: BTreeMap::new(),
         }
     }
 }
@@ -97,7 +100,7 @@ fn escape_toml_str(s: &str) -> String {
 
 impl AppConfig {
     pub fn to_toml_string(&self) -> String {
-        format!(
+        let mut out = format!(
             r#"# Arctis Nova 7 Configuration (`~/.config/arctis-nova-7/config.toml`)
 
 [general]
@@ -156,7 +159,19 @@ bt_call_behavior = "{bt_call}"
             mute_led = self.hardware.mute_led_brightness.min(MAX_MUTE_LED_BRIGHTNESS),
             bt_power = self.hardware.bt_power_on_default,
             bt_call = self.hardware.bt_call_behavior.as_str(),
-        )
+        );
+
+        out.push_str("\n[routing]\n");
+        out.push_str("# Persistent application-to-sink routing rules (\"app_key\" = \"sink_name\")\n");
+        for (app_key, sink_name) in &self.app_routing {
+            out.push_str(&format!(
+                "\"{}\" = \"{}\"\n",
+                escape_toml_str(app_key),
+                escape_toml_str(sink_name)
+            ));
+        }
+
+        out
     }
 
     pub fn from_toml_str(input: &str) -> Result<Self> {
@@ -165,10 +180,15 @@ bt_call_behavior = "{bt_call}"
         let mut web_port: Option<u16> = None;
         let mut active_profile_found = false;
         let mut active_profile_24g_found = false;
+        let mut current_section = String::new();
 
         for raw_line in input.lines() {
             let line = strip_comment(raw_line).trim();
-            if line.is_empty() || line.starts_with('[') {
+            if line.is_empty() {
+                continue;
+            }
+            if line.starts_with('[') && line.ends_with(']') {
+                current_section = line[1..line.len() - 1].trim().to_string();
                 continue;
             }
             let Some((raw_key, raw_val)) = line.split_once('=') else {
@@ -176,6 +196,15 @@ bt_call_behavior = "{bt_call}"
             };
             let key = raw_key.trim();
             let val = raw_val.trim();
+
+            if current_section == "routing" {
+                let app_key = unquote_toml_str(key).trim().to_string();
+                let sink_name = unquote_toml_str(val).trim().to_string();
+                if !app_key.is_empty() && !sink_name.is_empty() {
+                    cfg.app_routing.insert(app_key, sink_name);
+                }
+                continue;
+            }
 
             match key {
                 "active_profile" => {
@@ -736,5 +765,25 @@ active_profile_mic = "smiley"
         assert_eq!(loaded.active_profile, "cs2");
         assert_eq!(loaded.active_profile_bt, "vocal");
         assert_eq!(loaded.active_profile_mic, "smiley");
+    }
+
+    #[test]
+    fn test_config_app_routing_roundtrip() {
+        let mut cfg = AppConfig::default();
+        cfg.app_routing
+            .insert("vivaldi-bin".to_string(), "Arctis_Game".to_string());
+        cfg.app_routing
+            .insert("Discord".to_string(), "Arctis_Chat".to_string());
+
+        let toml = cfg.to_toml_string();
+        let parsed = AppConfig::from_toml_str(&toml).expect("Failed to parse TOML with [routing]");
+        assert_eq!(
+            parsed.app_routing.get("vivaldi-bin").map(String::as_str),
+            Some("Arctis_Game")
+        );
+        assert_eq!(
+            parsed.app_routing.get("Discord").map(String::as_str),
+            Some("Arctis_Chat")
+        );
     }
 }

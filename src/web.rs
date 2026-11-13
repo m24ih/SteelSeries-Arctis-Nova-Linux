@@ -214,6 +214,10 @@ fn handle_client(
         }
         ("POST", "/api/chatmix") | ("PUT", "/api/chatmix") => handle_post_chatmix(&mut stream, &worker, &body),
         ("POST", "/api/save-flash") | ("POST", "/api/flash-save") => handle_post_save_flash(&mut stream, &worker),
+        ("GET", "/api/streams") => handle_get_streams(&mut stream, &worker),
+        ("POST", "/api/streams/route") | ("PUT", "/api/streams/route") => {
+            handle_post_streams_route(&mut stream, &worker, &body)
+        }
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
         ("GET", "/favicon.ico") | ("GET", "/favicon.svg") => write_svg_response(&mut stream, 200, FAVICON_SVG),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
@@ -603,6 +607,152 @@ fn handle_post_chatmix(
 
     let resp = format!("{{\"ok\":true,\"game\":{},\"chat\":{}}}", game, chat);
     write_json_response(stream, 200, &resp)
+}
+
+fn sink_category(name: &str) -> &'static str {
+    if name.eq_ignore_ascii_case(crate::device::GAME_SINK_NAME) {
+        "game"
+    } else if name.eq_ignore_ascii_case(crate::device::CHAT_SINK_NAME) {
+        "chat"
+    } else {
+        "other"
+    }
+}
+
+fn handle_get_streams(stream: &mut TcpStream, worker: &DeviceWorkerHandle) -> Result<()> {
+    let sinks = crate::audio::list_sinks().unwrap_or_default();
+    let streams = crate::audio::list_sink_inputs().unwrap_or_default();
+    let rules = worker
+        .state
+        .read()
+        .map(|s| s.config.app_routing.clone())
+        .unwrap_or_default();
+
+    let sinks_json: Vec<String> = sinks
+        .iter()
+        .map(|s| {
+            format!(
+                "{{\"index\":{},\"name\":\"{}\",\"description\":\"{}\",\"state\":\"{}\",\"category\":\"{}\"}}",
+                s.index,
+                escape_json(&s.name),
+                escape_json(if s.description.is_empty() { &s.name } else { &s.description }),
+                escape_json(&s.state),
+                sink_category(&s.name)
+            )
+        })
+        .collect();
+
+    let streams_json: Vec<String> = streams
+        .iter()
+        .map(|st| {
+            format!(
+                "{{\"index\":{},\"sink_index\":{},\"sink_name\":\"{}\",\"app_name\":\"{}\",\"app_binary\":\"{}\",\"app_key\":\"{}\",\"media_name\":\"{}\",\"media_title\":\"{}\",\"icon_name\":\"{}\",\"corked\":{}}}",
+                st.index,
+                st.sink_index,
+                escape_json(&st.sink_name),
+                escape_json(&st.app_name),
+                escape_json(&st.app_binary),
+                escape_json(&st.app_key),
+                escape_json(&st.media_name),
+                escape_json(&st.media_title),
+                escape_json(&st.icon_name),
+                st.corked
+            )
+        })
+        .collect();
+
+    let rules_json: Vec<String> = rules
+        .iter()
+        .map(|(k, v)| format!("\"{}\":\"{}\"", escape_json(k), escape_json(v)))
+        .collect();
+
+    let json = format!(
+        "{{\"ok\":true,\"sinks\":[{}],\"streams\":[{}],\"rules\":{{{}}}}}",
+        sinks_json.join(","),
+        streams_json.join(","),
+        rules_json.join(",")
+    );
+    write_json_response(stream, 200, &json)
+}
+
+fn handle_post_streams_route(
+    stream: &mut TcpStream,
+    worker: &DeviceWorkerHandle,
+    body: &str,
+) -> Result<()> {
+    let mode = extract_json_string(body, "mode").unwrap_or_else(|| "app".to_string());
+    let sink = extract_json_string(body, "sink").unwrap_or_default();
+    let app_key = extract_json_string(body, "app_key").unwrap_or_default();
+    let save = extract_json_bool(body, "save").unwrap_or(mode != "stream");
+    let stream_index = extract_json_u64(body, "index");
+
+    if mode == "stream" {
+        let Some(idx) = stream_index else {
+            return write_error_response(stream, 400, "Missing stream 'index' for stream mode");
+        };
+        if sink.trim().is_empty() {
+            return write_error_response(stream, 400, "Target 'sink' cannot be empty");
+        }
+        if let Err(e) = crate::audio::move_sink_input(idx as u32, sink.trim()) {
+            return write_error_response(stream, 500, &e.to_string());
+        }
+        if save && !app_key.trim().is_empty() {
+            let (tx, rx) = mpsc::channel();
+            worker.send_command(DeviceCommand::SetAppRoutingRule {
+                app_key: app_key.trim().to_string(),
+                sink_name: Some(sink.trim().to_string()),
+                reply: tx,
+            })?;
+            let _ = rx.recv_timeout(Duration::from_secs(3));
+        }
+        return write_json_response(
+            stream,
+            200,
+            &format!(
+                "{{\"ok\":true,\"mode\":\"stream\",\"index\":{},\"sink\":\"{}\"}}",
+                idx,
+                escape_json(sink.trim())
+            ),
+        );
+    }
+
+    if app_key.trim().is_empty() {
+        return write_error_response(stream, 400, "Missing 'app_key'");
+    }
+
+    let mut moved = 0usize;
+    if !sink.trim().is_empty() {
+        moved = crate::audio::move_app_streams(app_key.trim(), sink.trim()).unwrap_or(0);
+    }
+
+    if save {
+        let (tx, rx) = mpsc::channel();
+        worker.send_command(DeviceCommand::SetAppRoutingRule {
+            app_key: app_key.trim().to_string(),
+            sink_name: if sink.trim().is_empty() {
+                None
+            } else {
+                Some(sink.trim().to_string())
+            },
+            reply: tx,
+        })?;
+        match rx.recv_timeout(Duration::from_secs(3)) {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return write_error_response(stream, 500, &e.to_string()),
+            Err(_) => return write_error_response(stream, 504, "Timed out saving routing rule"),
+        }
+    }
+
+    write_json_response(
+        stream,
+        200,
+        &format!(
+            "{{\"ok\":true,\"mode\":\"app\",\"app_key\":\"{}\",\"sink\":\"{}\",\"moved\":{}}}",
+            escape_json(app_key.trim()),
+            escape_json(sink.trim()),
+            moved
+        ),
+    )
 }
 
 /* ---------- Lightweight JSON Parsers ---------- */
