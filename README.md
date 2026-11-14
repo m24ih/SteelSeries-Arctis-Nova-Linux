@@ -6,7 +6,7 @@ Lightweight Linux daemon and hardware controller for the **SteelSeries Arctis No
 - **Sonar-Style App Routing**: Route apps to `Game`, `Chat`, or any output from the Web UI with native app icons and persistent rules.
 - **10-Band Hardware Parametric EQ & Controls**: Programs onboard DSP EQ profiles, Sidetone, ClearCast Mic Gain, EU Volume Limiter, Auto-Shutoff, Mute LED, and Bluetooth behavior, with onboard flash save.
 - **Live Telemetry & Web Companion**: Embedded local dashboard at `http://127.0.0.1:3927` (TR / EN) with real-time battery, RF link, and ChatMix status.
-- **System Tray Indicator & Quick Menu**: Battery color-coded tray icon (Green >25%, Yellow 11–25%, Red <=10%, Blue charging, Grey disconnected) with live connection/ChatMix status, quick EQ preset switching (`Mode`), TR/EN language toggle, and one-click Web UI launch.
+- **System Tray Indicator & Quick Menu**: Battery color-coded tray icon (Green >=50%, Yellow 15–49%, Red <=14%, Blue charging, Grey disconnected) with live connection/ChatMix status, quick EQ preset switching (`Mode`), TR/EN language toggle, and one-click Web UI launch.
 
 ---
 

@@ -4,9 +4,9 @@
 // - Procedurally drawn 32x32 ARGB32 headset icon matching device state:
 //   * Disconnected: Slate/Dark Grey ([255, 110, 115, 120])
 //   * Charging: Blue ([255, 52, 152, 219])
-//   * Connected on Battery > 25%: Green ([255, 46, 204, 113])
-//   * Connected on Battery 11..=25%: Yellow ([255, 241, 196, 15])
-//   * Connected on Battery <= 10%: Red ([255, 231, 76, 60])
+//   * Connected on Battery >= 50%: Green ([255, 46, 204, 113])
+//   * Connected on Battery 15..=49%: Yellow ([255, 241, 196, 15])
+//   * Connected on Battery <= 14%: Red ([255, 231, 76, 60])
 // - Left-click opens Web Control Panel in default browser via xdg-open.
 // - Cloudflare WARP-style right-click context menu:
 //   * 'Open Control Panel'
@@ -246,8 +246,8 @@ pub fn determine_icon_color(state: &HeadsetState) -> [u8; 4] {
     }
 
     match state.telemetry.battery_percent {
-        Some(pct) if pct <= 10 => COLOR_BATTERY_RED,
-        Some(pct) if pct <= 25 => COLOR_BATTERY_YELLOW,
+        Some(pct) if pct <= 14 => COLOR_BATTERY_RED,
+        Some(pct) if pct <= 49 => COLOR_BATTERY_YELLOW,
         _ => COLOR_BATTERY_GREEN,
     }
 }
@@ -680,23 +680,23 @@ mod tests {
         state.telemetry.charging = ChargingState::Charging;
         assert_eq!(determine_icon_color(&state), COLOR_CHARGING);
 
-        // 3. On battery > 25% -> Green
+        // 3. On battery >= 50% -> Green
         state.telemetry.charging = ChargingState::NotCharging;
         state.telemetry.battery_percent = Some(85);
         assert_eq!(determine_icon_color(&state), COLOR_BATTERY_GREEN);
 
-        state.telemetry.battery_percent = Some(26);
+        state.telemetry.battery_percent = Some(50);
         assert_eq!(determine_icon_color(&state), COLOR_BATTERY_GREEN);
 
-        // 4. On battery 11..=25% -> Yellow
-        state.telemetry.battery_percent = Some(25);
+        // 4. On battery 15..=49% -> Yellow
+        state.telemetry.battery_percent = Some(49);
         assert_eq!(determine_icon_color(&state), COLOR_BATTERY_YELLOW);
 
-        state.telemetry.battery_percent = Some(11);
+        state.telemetry.battery_percent = Some(15);
         assert_eq!(determine_icon_color(&state), COLOR_BATTERY_YELLOW);
 
-        // 5. On battery <= 10% -> Red
-        state.telemetry.battery_percent = Some(10);
+        // 5. On battery <= 14% -> Red
+        state.telemetry.battery_percent = Some(14);
         assert_eq!(determine_icon_color(&state), COLOR_BATTERY_RED);
 
         state.telemetry.battery_percent = Some(1);
