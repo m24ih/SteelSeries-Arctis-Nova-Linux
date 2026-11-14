@@ -219,6 +219,8 @@ fn handle_client(
             handle_post_streams_route(&mut stream, &worker, &body)
         }
         ("GET", "/api/icon") => handle_get_icon(&mut stream, raw_target),
+        ("GET", "/api/version") | ("GET", "/api/health") => handle_get_version(&mut stream),
+        ("POST", "/api/update/install") => handle_post_update_install(&mut stream, &body),
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
         ("GET", "/favicon.ico") | ("GET", "/favicon.svg") => write_svg_response(&mut stream, 200, FAVICON_SVG),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
@@ -1238,9 +1240,183 @@ const DEFAULT_INDEX_HTML: &str = include_str!("../web/index.html");
 
 const FAVICON_SVG: &str = include_str!("../web/favicon.svg");
 
+fn handle_get_version(stream: &mut TcpStream) -> Result<()> {
+    let payload = format!(
+        r#"{{"status":"ok","version":"{}","os":"{}","arch":"{}"}}"#,
+        env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+    write_json_response(stream, 200, &payload)
+}
+
+fn is_valid_update_url(url: &str) -> bool {
+    let trimmed = url.trim();
+    trimmed.starts_with("https://github.com/m24ih/SteelSeries-Arctis-Nova-Linux/releases/")
+        || trimmed.starts_with("https://gitlab.com/m24ih/SteelSeries-Arctis-Nova-Linux/-/releases/")
+}
+
+fn sanitize_update_version(raw: &str) -> String {
+    let cleaned: String = raw
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '.' || *c == '-')
+        .collect();
+    if cleaned.is_empty() {
+        "latest".to_string()
+    } else {
+        cleaned
+    }
+}
+
+fn handle_post_update_install(stream: &mut TcpStream, body: &str) -> Result<()> {
+    let raw_url = extract_json_string(body, "download_url").unwrap_or_default();
+    let url = raw_url.trim();
+    if !is_valid_update_url(url) {
+        return write_json_response(
+            stream,
+            400,
+            r#"{"error":"Invalid download URL source"}"#,
+        );
+    }
+
+    let raw_version = extract_json_string(body, "version").unwrap_or_default();
+    let safe_version = sanitize_update_version(&raw_version);
+
+    match install_linux_update(url, &safe_version) {
+        Ok(current_exe) => {
+            write_json_response(
+                stream,
+                200,
+                r#"{"status":"installing","message":"Update applied. Service is restarting..."}"#,
+            )?;
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(350));
+                let restarted = std::process::Command::new("systemctl")
+                    .args(["--user", "restart", "arctis_chatmix.service"])
+                    .status()
+                    .map(|status| status.success())
+                    .unwrap_or(false);
+                if !restarted {
+                    let mut command = std::process::Command::new(&current_exe);
+                    command.args(std::env::args_os().skip(1));
+                    if command.spawn().is_ok() {
+                        std::process::exit(0);
+                    }
+                }
+            });
+            Ok(())
+        }
+        Err(err) => {
+            let escaped = escape_json_string(&err);
+            let payload = format!(r#"{{"error":"{}"}}"#, escaped);
+            write_json_response(stream, 500, &payload)
+        }
+    }
+}
+
+fn install_linux_update(url: &str, safe_version: &str) -> std::result::Result<std::path::PathBuf, String> {
+    use std::fs::{self, File};
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
+    let current_exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let current_dir = current_exe
+        .parent()
+        .ok_or_else(|| "Could not determine current executable directory".to_string())?;
+
+    let file_name = format!(
+        ".arctis-chatmix-update-{}-{}",
+        safe_version,
+        std::process::id()
+    );
+    let download_path = current_dir.join(&file_name);
+
+    // Verify we have write permission in the executable's directory before downloading.
+    if let Err(e) = File::create(&download_path) {
+        return Err(format!(
+            "Binary directory is not writable ({e}). Run 'install.sh --update' if installed system-wide."
+        ));
+    }
+
+    let download_str = download_path
+        .to_str()
+        .ok_or_else(|| "Invalid temporary download path".to_string())?;
+
+    let status = std::process::Command::new("curl")
+        .args(["-fSL", "--max-time", "120", url, "-o", download_str])
+        .status()
+        .map_err(|e| {
+            let _ = fs::remove_file(&download_path);
+            format!("Failed to run curl: {e}")
+        })?;
+
+    if !status.success() {
+        let _ = fs::remove_file(&download_path);
+        return Err("Failed to download update binary".to_string());
+    }
+
+    let meta = fs::metadata(&download_path).map_err(|e| {
+        let _ = fs::remove_file(&download_path);
+        format!("Failed to inspect downloaded binary: {e}")
+    })?;
+    if meta.len() < 1024 {
+        let _ = fs::remove_file(&download_path);
+        return Err("Downloaded update binary is empty or invalid".to_string());
+    }
+
+    #[cfg(unix)]
+    fs::set_permissions(&download_path, fs::Permissions::from_mode(0o755)).map_err(|e| {
+        let _ = fs::remove_file(&download_path);
+        e.to_string()
+    })?;
+
+    fs::rename(&download_path, &current_exe).map_err(|e| {
+        let _ = fs::remove_file(&download_path);
+        format!("Failed to replace running binary: {e}")
+    })?;
+
+    Ok(current_exe)
+}
+
+fn escape_json_string(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_valid_update_url() {
+        assert!(is_valid_update_url(
+            "https://github.com/m24ih/SteelSeries-Arctis-Nova-Linux/releases/download/v1.0.1/arctis_chatmix"
+        ));
+        assert!(is_valid_update_url(
+            "https://gitlab.com/m24ih/SteelSeries-Arctis-Nova-Linux/-/releases/v1.0.1/downloads/arctis_chatmix"
+        ));
+        assert!(!is_valid_update_url("http://github.com/m24ih/SteelSeries-Arctis-Nova-Linux/releases/download/v1.0.1/arctis_chatmix"));
+        assert!(!is_valid_update_url("https://evil.example.com/arctis_chatmix"));
+        assert!(!is_valid_update_url(""));
+    }
+
+    #[test]
+    fn test_sanitize_update_version() {
+        assert_eq!(sanitize_update_version("1.0.1"), "1.0.1");
+        assert_eq!(sanitize_update_version("1.0.1-rc1"), "1.0.1-rc1");
+        assert_eq!(sanitize_update_version("../../1.0.1;rm -rf"), "....1.0.1rm-rf");
+        assert_eq!(sanitize_update_version("///"), "latest");
+    }
 
     #[test]
     fn test_extract_query_param() {
