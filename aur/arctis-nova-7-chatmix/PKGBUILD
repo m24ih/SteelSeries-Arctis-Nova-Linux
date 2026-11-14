@@ -1,6 +1,6 @@
 # Maintainer: Melih AK <melihak2467@gmail.com>
 pkgname=arctis-nova-7-chatmix
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Linux PipeWire ChatMix, 10-Band DSP EQ & Web Companion daemon for SteelSeries Arctis Nova 7 headsets"
 arch=('x86_64')
